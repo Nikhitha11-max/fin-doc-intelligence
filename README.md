@@ -6,6 +6,8 @@
 **Status:** Initial planning draft  
 **Audience:** Product owner, developer, GitHub Copilot, and Spec Kit
 
+> For the proposed repository layout, local setup, and task-by-task implementation guides, see the [documentation hub](docs/README.md). This file remains the product requirements reference.
+
 ---
 
 ## 1. Project Overview
@@ -592,15 +594,15 @@ Until these are confirmed, use safe development defaults and mark unresolved cho
 
 ## 18. First Instructions for GitHub Copilot
 
-After adding this file to the repository, ask Copilot to review it before implementing anything:
+Before implementation, ask Copilot to review the requirements and documentation:
 
-> Read `Doc/README.md` completely. Treat it as the primary product requirements reference for FinDoc AI. Do not implement the application yet.
+> Read the root `README.md` completely as the product requirements reference, then read `docs/README.md` and the relevant task guide. Do not implement anything until the requirements and decisions for that task are clear.
 >
 > 1. Identify ambiguous, conflicting, or missing requirements.
 > 2. Identify security requirements that need measurable acceptance criteria.
 > 3. Separate first-release requirements from future features.
 > 4. List decisions that must be confirmed before architecture planning.
-> 5. Recommend how to split the work into GitHub Spec Kit feature specifications.
+> 5. Confirm the proposed project structure and task dependencies.
 > 6. Do not silently change requirements or invent product decisions.
 > 7. Return your findings and proposed changes for review.
 

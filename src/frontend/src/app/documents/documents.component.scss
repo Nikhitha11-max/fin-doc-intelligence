@@ -1,0 +1,9 @@
+:host { display: block; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
+.bar { display: flex; justify-content: space-between; align-items: center; }
+.upload { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; }
+.actions { white-space: nowrap; }
+.pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+.message { color: #1b5e20; }
+.error { color: #b00020; }

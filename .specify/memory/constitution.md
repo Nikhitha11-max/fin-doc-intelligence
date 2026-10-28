@@ -1,11 +1,3 @@
-<!--
-Sync Impact Report (temporary; remove before committing)
-Version change: (template) → 1.0.0
-Modified principles: none (initial ratification)
-Added sections: Core Principles I–VII, Technology and Security Constraints, Development Workflow and Quality Gates, Governance
-Removed sections: none
-Follow-up TODOs: none. Product decisions still awaiting confirmation are tracked in README.md section 16, not here.
--->
 # FinDoc AI Constitution
 
 ## Core Principles

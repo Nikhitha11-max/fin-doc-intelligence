@@ -38,6 +38,23 @@ Do not add text extraction, vector search, or AI question answering in this task
 - Required audit events are recorded without secrets or unnecessary document contents.
 - Migrations, tests, and documentation match the approved specification.
 
+## Status
+
+The backend is implemented against the [spec](../../../specs/001-secure-document-management/spec.md), using safe default decisions that still need product-owner confirmation. Covered: Identity API auth (`/api/auth/*`), tenant-scoped document upload/list/get/download/update/soft-delete under `/api/documents`, local private storage, audit events, and the initial EF migration. 25 automated tests pass (`dotnet test FinDoc.sln`). The Angular UI for this task is not built yet.
+
+### Try it locally
+
+```sh
+cd src/backend/FinDoc.Api
+dotnet user-secrets init
+dotnet user-secrets set "Seed:Password" "<choose a strong password>"
+dotnet run --launch-profile http
+```
+
+In Development with `Seed:Password` set, startup applies migrations and creates demo users `admin@acme.test`, `analyst@acme.test` and `admin@globex.test` (two tenants). Log in via `POST /api/auth/login`, then use the bearer token in Swagger at `/swagger`. Uploaded files go to `src/backend/FinDoc.Api/storage/` (git-ignored).
+
+Open items: confirm the default decisions, add the Angular document screens, and review self-registration (`/api/auth/register`) before production, since tenant membership is administered in Task 002.
+
 ## Copilot task prompt
 
 > Read the root `README.md`, `docs/README.md`, and this task guide. Implement only Task 001 after confirming unresolved product decisions. Start by proposing the feature specification and acceptance criteria for review. Do not implement processing, embeddings, or AI features. Enforce authorization on the server and add tests for cross-tenant access.

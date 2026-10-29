@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantMembership> Memberships => Set<TenantMembership>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentChunk> Chunks => Set<DocumentChunk>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -32,8 +33,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(x => x.Extension).HasMaxLength(10);
             e.Property(x => x.Sha256).HasMaxLength(64);
             e.Property(x => x.StorageKey).HasMaxLength(100);
+            e.Property(x => x.FailureCode).HasMaxLength(50);
+            e.Property(x => x.FailureMessage).HasMaxLength(200);
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
             e.HasIndex(x => new { x.TenantId, x.CreatedAt });
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId);
+        });
+
+        builder.Entity<DocumentChunk>(e =>
+        {
+            e.Property(x => x.SheetName).HasMaxLength(255);
+            e.HasIndex(x => new { x.DocumentId, x.Ordinal }).IsUnique();
+            e.HasIndex(x => x.TenantId);
+            e.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
+            // Chunks of soft-deleted documents are invisible to every query.
+            e.HasQueryFilter(c => !Documents.Any(d => d.Id == c.DocumentId && d.DeletedAt != null));
         });
 
         builder.Entity<AuditEvent>(e =>

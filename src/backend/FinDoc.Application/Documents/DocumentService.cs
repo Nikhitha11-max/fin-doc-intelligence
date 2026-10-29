@@ -4,7 +4,7 @@ using FinDoc.Domain.Entities;
 
 namespace FinDoc.Application.Documents;
 
-public record DocumentDto(Guid Id, string Title, string FileName, string Extension, long SizeBytes, DateTimeOffset CreatedAt, DateTimeOffset? UpdatedAt);
+public record DocumentDto(Guid Id, string Title, string FileName, string Extension, long SizeBytes, DateTimeOffset CreatedAt, DateTimeOffset? UpdatedAt, string Status, string? FailureCode, string? FailureMessage);
 
 public record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
 
@@ -95,6 +95,19 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
         await store.SaveChangesAsync(ct);
     }
 
+    public async Task<DocumentDto> RetryAsync(Guid id, CancellationToken ct)
+    {
+        var caller = await AuthorizeAsync(Writers, ct);
+        var document = await FindAsync(caller, id, ct);
+        if (!await store.TryRetryAsync(caller.TenantId, id, ct))
+            throw new ConflictException("Only failed documents can be retried.");
+
+        Audit(caller, "document.retry", document.Id);
+        await store.SaveChangesAsync(ct);
+        var refreshed = await FindAsync(caller, id, ct);
+        return ToDto(refreshed);
+    }
+
     private record Caller(string UserId, Guid TenantId);
 
     private async Task<Caller> AuthorizeAsync(TenantRole[] allowed, CancellationToken ct)
@@ -115,5 +128,5 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
         store.AddAudit(new AuditEvent { TenantId = caller.TenantId, ActorUserId = caller.UserId, Action = action, DocumentId = documentId });
 
     private static DocumentDto ToDto(Document d) =>
-        new(d.Id, d.Title, d.OriginalFileName, d.Extension, d.SizeBytes, d.CreatedAt, d.UpdatedAt);
+        new(d.Id, d.Title, d.OriginalFileName, d.Extension, d.SizeBytes, d.CreatedAt, d.UpdatedAt, d.Status.ToString(), d.FailureCode, d.FailureMessage);
 }

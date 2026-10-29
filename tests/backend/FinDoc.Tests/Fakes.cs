@@ -42,6 +42,16 @@ public class FakeStore : IDocumentStore
         return Task.FromResult<(IReadOnlyList<Document>, int)>((all.Skip(skip).Take(take).ToList(), all.Count));
     }
 
+    public Task<bool> TryRetryAsync(Guid tenantId, Guid id, CancellationToken ct)
+    {
+        var d = Documents.FirstOrDefault(x => x.TenantId == tenantId && x.Id == id && x.DeletedAt == null && x.Status == DocumentStatus.Failed);
+        if (d is null) return Task.FromResult(false);
+        d.Status = DocumentStatus.Pending;
+        d.FailureCode = d.FailureMessage = null;
+        d.Attempts = 0;
+        return Task.FromResult(true);
+    }
+
     public void Add(Document document) => Documents.Add(document);
     public void AddAudit(AuditEvent auditEvent) => Audits.Add(auditEvent);
     public Task SaveChangesAsync(CancellationToken ct) => Task.CompletedTask;

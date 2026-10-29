@@ -38,3 +38,15 @@ Do not add embeddings, semantic search, or generated answers.
 ## Copilot task prompt
 
 > Read the root `README.md`, `docs/README.md`, and this task guide. Implement only secure asynchronous text extraction and processing status. Propose acceptance criteria for file types, OCR, retries, and retention before coding if those decisions are unresolved. Do not add embeddings, search, or AI answers.
+
+## Status: implemented
+
+- A PostgreSQL-backed queue (`FOR UPDATE SKIP LOCKED` plus a lease) feeds a hosted `ProcessingWorker`. Expired leases are reclaimed, so a crashed worker's document is picked up again; after `Processing:MaxAttempts` (default 5) it fails with `internal`.
+- Chunks and the status change commit in one transaction; stale claims, deleted documents and re-claimed documents are discarded, so retries never leave duplicates or half-processed state.
+- Extractors: PdfPig (pages), a streaming CSV reader (rows), and Open XML (sheet/rows) with a decompression-bomb guard. Limits live in `ProcessingOptions` and can be overridden under the `Processing:` configuration section (for example `Processing:Timeout`, `Processing:MaxRows`, `Processing:WorkerEnabled`).
+- Failure codes: `corrupted`, `encrypted`, `empty`, `no_extractable_text`, `too_large`, `timeout`, `internal`. Messages are fixed text per code.
+- API: documents expose `status`, `failureCode`, `failureMessage`; `POST /api/documents/{id}/retry` (TenantAdmin, DocumentManager; Failed only, otherwise 409). Chunks are never returned.
+- Soft-deleted documents are skipped and their chunks are hidden by a query filter. Derived data is kept with the document until a retention policy is approved, same as feature 001.
+- Audit actions: `document.processing_started`, `document.processing_completed`, `document.processing_failed` (detail = failure code, actor `system`), `document.retry`.
+- Known limits: a password-protected `.xlsx` is an OLE file and is rejected at upload; parser CPU limits rely on cooperative cancellation between pages and rows.
+- Tests: `dotnet test` (extractors, service, Postgres integration, background worker) and Angular status/Retry tests.

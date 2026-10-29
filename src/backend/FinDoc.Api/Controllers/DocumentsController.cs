@@ -40,6 +40,9 @@ public class DocumentsController(DocumentService documents) : ControllerBase
     public Task<DocumentDto> Update(Guid id, UpdateDocumentRequest request, CancellationToken ct) =>
         documents.UpdateAsync(id, request.Title, ct);
 
+    [HttpPost("{id:guid}/retry")]
+    public Task<DocumentDto> Retry(Guid id, CancellationToken ct) => documents.RetryAsync(id, ct);
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {

@@ -1,6 +1,8 @@
 using FinDoc.Application.Abstractions;
 using FinDoc.Application.Access;
 using FinDoc.Application.Documents;
+using FinDoc.Application.Processing;
+using FinDoc.Infrastructure.Processing;
 using FinDoc.Infrastructure.Persistence;
 using FinDoc.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +23,18 @@ public static class DependencyInjection
         services.AddScoped<IAccessStore, AccessStore>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<DocumentService>();
+
+        var processing = new ProcessingOptions();
+        config.GetSection("Processing").Bind(processing);
+        services.AddSingleton(processing);
+        services.AddSingleton<IDocumentExtractor, PdfExtractor>();
+        services.AddSingleton<IDocumentExtractor, CsvExtractor>();
+        services.AddSingleton<IDocumentExtractor, XlsxExtractor>();
+        services.AddScoped<IProcessingStore, ProcessingStore>();
+        services.AddScoped<ProcessingService>();
+        if (config.GetValue("Processing:WorkerEnabled", true))
+            services.AddHostedService<ProcessingWorker>();
+
         services.AddScoped<MemberService>();
         services.AddScoped<PlatformTenantService>();
         return services;

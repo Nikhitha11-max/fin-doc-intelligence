@@ -24,7 +24,7 @@
 } @else {
   <table>
     <thead>
-      <tr><th>Title</th><th>File</th><th>Size</th><th>Uploaded</th><th></th></tr>
+      <tr><th>Title</th><th>File</th><th>Status</th><th>Size</th><th>Uploaded</th><th></th></tr>
     </thead>
     <tbody>
       @for (doc of items(); track doc.id) {
@@ -39,9 +39,18 @@
             }
           </td>
           <td>{{ doc.fileName }}</td>
+          <td>
+            <span class="badge" [class]="'badge ' + doc.status.toLowerCase()">{{ doc.status }}</span>
+            @if (doc.status === 'Failed' && doc.failureMessage) {
+              <small class="reason">{{ doc.failureMessage }}</small>
+            }
+          </td>
           <td>{{ formatSize(doc.sizeBytes) }}</td>
           <td>{{ doc.createdAt | date: 'medium' }}</td>
           <td class="actions">
+            @if (doc.status === 'Failed' && canRetry()) {
+              <button type="button" (click)="retry(doc)">Retry</button>
+            }
             <button type="button" (click)="download(doc)">Download</button>
             <button type="button" (click)="editingId.set(doc.id)">Rename</button>
             <button type="button" (click)="remove(doc)">Delete</button>

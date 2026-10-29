@@ -34,7 +34,12 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGroup("/api/auth").MapIdentityApi<IdentityUser>();
+// Users are created only by administrators (feature 002), so open self-registration is not exposed.
+app.MapGroup("/api/auth").MapIdentityApi<IdentityUser>()
+    .AddEndpointFilter(async (context, next) =>
+        context.HttpContext.Request.Path.StartsWithSegments("/api/auth/register")
+            ? Results.NotFound()
+            : await next(context));
 app.MapControllers();
 
 app.Run();

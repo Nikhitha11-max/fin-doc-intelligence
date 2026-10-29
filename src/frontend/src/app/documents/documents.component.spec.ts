@@ -49,6 +49,7 @@ describe('DocumentsComponent', () => {
   it('rejects disallowed files before calling the API', () => {
     flushList([]);
     const input = document.createElement('input');
+    input.type = 'file';
     const file = new File(['x'], 'malware.exe');
     const transfer = new DataTransfer();
     transfer.items.add(file);

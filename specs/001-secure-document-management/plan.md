@@ -1,6 +1,6 @@
 # Implementation Plan: Secure Document Management
 
-**Spec**: [spec.md](./spec.md) | **Status**: Implemented (backend and Angular UI); retrospective plan recording what was built.
+**Spec**: [spec.md](./spec.md) | **Status**: Implemented and verified; retrospective plan recording what was built.
 
 ## Summary
 Tenant-scoped upload, list, view, download, update and soft-delete of PDF/CSV/XLSX documents, stored privately, authorized per request, with audit events.
@@ -33,7 +33,7 @@ Tenant-scoped upload, list, view, download, update and soft-delete of PDF/CSV/XL
 ## Constitution Check
 Server-side authz, tenant from server, safe errors, private storage, audit without content, isolation tests: satisfied.
 
-## Known Gaps (handled by later features)
-- Open `/api/auth/register` and dev-only seeding of tenants/users: feature 002.
-- Retention of soft-deleted files: undecided.
-- Angular UI built but not yet verified by `ng build` / `ng test` or a manual run.
+## Resolved Gaps
+- `/api/auth/register` now returns 404; users are created by the dev seeder until feature 002 adds administrator-created users.
+- Retention of soft-deleted files: keep indefinitely until a policy is approved (confirmed 2026-10-29).
+- Angular UI verified: `ng build`, 8 unit tests, and a browser run through the dev proxy.

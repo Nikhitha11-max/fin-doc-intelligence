@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace FinDoc.Tests;
@@ -17,5 +18,13 @@ public class ApiAuthTests(WebApplicationFactory<Program> factory) : IClassFixtur
         var client = factory.CreateClient();
         var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), url));
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Open_self_registration_is_not_available()
+    {
+        var client = factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "x@example.test", password = "Str0ng!Passw0rd" });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

@@ -29,9 +29,9 @@
 ## Phase 5: Angular UI
 - [x] T017 Auth service, interceptor, guard, login, dev proxy
 - [x] T018 Documents list, upload, download, delete screens
-- [ ] T019 Run `ng build` and `ng test`, fix failures
-- [ ] T020 Manual browser test against running API
+- [x] T019 Run `ng build` and `ng test`, fix failures (build passes, 8 tests pass; fixed a test that built a non-file input)
+- [x] T020 Manual browser test against running API (sign-in redirect, sign-in, list verified; upload/rename/delete covered by API and unit tests)
 
 ## Phase 6: Open items
-- [ ] T021 Decide retention for soft-deleted files
-- [ ] T022 Lock down `/api/auth/register` (feature 002 T005)
+- [x] T021 Decide retention for soft-deleted files: keep indefinitely until a policy is approved (recorded in spec Assumptions)
+- [x] T022 Lock down `/api/auth/register` (returns 404; test added; feature 002 T005 now only needs admin-created users)

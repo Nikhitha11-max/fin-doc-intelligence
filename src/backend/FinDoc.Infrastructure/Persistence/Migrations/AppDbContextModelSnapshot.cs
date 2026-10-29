@@ -37,11 +37,19 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Detail")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid?>("DocumentId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TargetUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -119,6 +127,12 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -134,6 +148,9 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");

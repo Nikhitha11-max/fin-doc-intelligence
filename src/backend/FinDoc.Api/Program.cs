@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
@@ -17,6 +18,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityApiEndpoints<IdentityUser>(o => o.User.RequireUniqueEmail = true)
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
 
 var app = builder.Build();
@@ -29,6 +31,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
     await DevSeeder.SeedAsync(app.Services, app.Configuration["Seed:Password"]);
 }
+
+await PlatformBootstrap.RunAsync(app.Services, app.Configuration["Bootstrap:PlatformAdminEmail"], app.Configuration["Bootstrap:PlatformAdminPassword"]);
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

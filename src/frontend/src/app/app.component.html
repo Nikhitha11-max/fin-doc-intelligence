@@ -1,1 +1,15 @@
+@if (auth.isLoggedIn() && access.me(); as me) {
+  <nav class="nav" aria-label="Main">
+    @if (me.hasAccess) {
+      <a routerLink="/documents">Documents</a>
+    }
+    @if (me.role === 'TenantAdmin') {
+      <a routerLink="/team">Team</a>
+    }
+    @if (me.isPlatformAdmin) {
+      <a routerLink="/platform">Organizations</a>
+    }
+    <span class="who">{{ me.tenantName ?? (me.isPlatformAdmin ? 'Platform' : 'No organization access') }}{{ me.role ? ' · ' + me.role : '' }}</span>
+  </nav>
+}
 <router-outlet />

@@ -1,4 +1,5 @@
 using FinDoc.Application.Abstractions;
+using FinDoc.Application.Access;
 using FinDoc.Application.Documents;
 using FinDoc.Infrastructure.Persistence;
 using FinDoc.Infrastructure.Storage;
@@ -17,7 +18,11 @@ public static class DependencyInjection
         services.AddScoped<IDocumentStore, DocumentStore>();
         services.AddSingleton<IFileStorage>(_ =>
             new LocalFileStorage(config["Storage:RootPath"] ?? "storage"));
+        services.AddScoped<IAccessStore, AccessStore>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<DocumentService>();
+        services.AddScoped<MemberService>();
+        services.AddScoped<PlatformTenantService>();
         return services;
     }
 }

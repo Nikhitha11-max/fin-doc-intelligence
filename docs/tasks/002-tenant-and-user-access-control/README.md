@@ -37,3 +37,10 @@ Do not weaken Task 001's document authorization rules or add AI features.
 ## Copilot task prompt
 
 > Read the root `README.md`, `docs/README.md`, and this task guide. Implement only tenant and membership administration on top of Task 001. First identify unresolved decisions and propose acceptance criteria. Preserve existing document authorization and add tests for cross-tenant administration and role escalation.
+
+## Status: implemented
+
+- Backend: members, roles, platform tenants and `/api/me`, with a tenant row lock for last-admin safety.
+- Angular: role-aware nav, Team page (TenantAdmin) and Organizations page (PlatformAdmin).
+- Configuration: `Bootstrap:PlatformAdminEmail` and `Bootstrap:PlatformAdminPassword` (user-secrets or environment) create the first platform admin.
+- Tests: `dotnet test` needs local PostgreSQL; the database defaults to `findoc_test` and can be set with `FINDOC_TEST_DB`.

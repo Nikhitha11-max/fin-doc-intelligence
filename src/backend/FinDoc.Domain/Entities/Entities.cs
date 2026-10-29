@@ -12,7 +12,9 @@ public class Tenant
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? DeactivatedAt { get; set; }
 }
 
 public class TenantMembership
@@ -21,6 +23,7 @@ public class TenantMembership
     public Guid TenantId { get; set; }
     public string UserId { get; set; } = string.Empty;
     public TenantRole Role { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public class Document
@@ -46,5 +49,7 @@ public class AuditEvent
     public string ActorUserId { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
     public Guid? DocumentId { get; set; }
+    public string? TargetUserId { get; set; }
+    public string? Detail { get; set; }
     public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
 }

@@ -6,8 +6,11 @@ namespace FinDoc.Infrastructure.Persistence;
 
 public class DocumentStore(AppDbContext db) : IDocumentStore
 {
+    // Memberships of deactivated tenants are treated as absent so deactivation takes effect on the next request.
     public Task<TenantMembership?> GetMembershipAsync(string userId, CancellationToken ct) =>
-        db.Memberships.AsNoTracking().FirstOrDefaultAsync(m => m.UserId == userId, ct);
+        db.Memberships.AsNoTracking()
+            .Where(m => m.UserId == userId && db.Tenants.Any(t => t.Id == m.TenantId && t.IsActive))
+            .FirstOrDefaultAsync(ct);
 
     public Task<Document?> GetAsync(Guid tenantId, Guid id, CancellationToken ct) =>
         db.Documents.FirstOrDefaultAsync(d => d.TenantId == tenantId && d.Id == id && d.DeletedAt == null, ct);

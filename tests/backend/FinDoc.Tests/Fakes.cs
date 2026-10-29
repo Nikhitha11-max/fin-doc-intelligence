@@ -6,6 +6,7 @@ namespace FinDoc.Tests;
 public class FakeUser : ICurrentUser
 {
     public string? UserId { get; set; }
+    public bool IsPlatformAdmin { get; set; }
 }
 
 public class FakeFiles : IFileStorage

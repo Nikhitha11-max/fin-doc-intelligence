@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AccessService } from '../core/access.service';
 import { AuthService } from '../core/auth.service';
 
 @Component({
@@ -29,6 +30,7 @@ import { AuthService } from '../core/auth.service';
 })
 export class LoginComponent {
   private readonly auth = inject(AuthService);
+  private readonly access = inject(AccessService);
   private readonly router = inject(Router);
 
   readonly form = inject(FormBuilder).nonNullable.group({
@@ -46,7 +48,11 @@ export class LoginComponent {
     this.error.set('');
     const { email, password } = this.form.getRawValue();
     this.auth.login(email, password).subscribe({
-      next: () => void this.router.navigate(['/documents']),
+      next: () =>
+        this.access.loadMe().subscribe({
+          next: (me) => void this.router.navigate([me.isPlatformAdmin ? '/platform' : '/documents']),
+          error: () => void this.router.navigate(['/documents']),
+        }),
       error: (e: HttpErrorResponse) => {
         this.busy.set(false);
         this.error.set(e.status === 401 ? 'Invalid email or password.' : 'Sign-in failed. Please try again.');

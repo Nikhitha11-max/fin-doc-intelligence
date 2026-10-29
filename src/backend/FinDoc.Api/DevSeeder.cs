@@ -18,6 +18,7 @@ public static class DevSeeder
         var users = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
         await db.Database.MigrateAsync();
 
+        await PlatformBootstrap.RunAsync(services, "platform@findoc.test", password);
         await SeedUserAsync("Acme", "admin@acme.test", TenantRole.TenantAdmin);
         await SeedUserAsync("Acme", "analyst@acme.test", TenantRole.Analyst);
         await SeedUserAsync("Globex", "admin@globex.test", TenantRole.TenantAdmin);

@@ -23,6 +23,20 @@ public class DocumentStore(AppDbContext db) : IDocumentStore
         return (items, total);
     }
 
+    public async Task<bool> TryRetryAsync(Guid tenantId, Guid id, CancellationToken ct)
+    {
+        var rows = await db.Documents
+            .Where(d => d.TenantId == tenantId && d.Id == id && d.DeletedAt == null && d.Status == DocumentStatus.Failed)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(d => d.Status, DocumentStatus.Pending)
+                .SetProperty(d => d.FailureCode, (string?)null)
+                .SetProperty(d => d.FailureMessage, (string?)null)
+                .SetProperty(d => d.ProcessingLeaseUntil, (DateTimeOffset?)null)
+                .SetProperty(d => d.Attempts, 0), ct);
+        db.ChangeTracker.Clear();
+        return rows == 1;
+    }
+
     public void Add(Document document) => db.Documents.Add(document);
 
     public void AddAudit(AuditEvent auditEvent) => db.AuditEvents.Add(auditEvent);

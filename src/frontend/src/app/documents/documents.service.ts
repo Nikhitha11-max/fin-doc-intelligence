@@ -2,6 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+export type DocumentStatus = 'Pending' | 'Processing' | 'Completed' | 'Failed';
+
 export interface DocumentItem {
   id: string;
   title: string;
@@ -10,6 +12,9 @@ export interface DocumentItem {
   sizeBytes: number;
   createdAt: string;
   updatedAt: string | null;
+  status: DocumentStatus;
+  failureCode: string | null;
+  failureMessage: string | null;
 }
 
 export interface PagedResult<T> {
@@ -42,6 +47,10 @@ export class DocumentsService {
 
   rename(id: string, title: string): Observable<DocumentItem> {
     return this.http.put<DocumentItem>(`${this.baseUrl}/${id}`, { title });
+  }
+
+  retry(id: string): Observable<DocumentItem> {
+    return this.http.post<DocumentItem>(`${this.baseUrl}/${id}/retry`, {});
   }
 
   delete(id: string): Observable<void> {

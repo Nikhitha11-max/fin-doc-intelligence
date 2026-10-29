@@ -26,6 +26,14 @@ public class TenantMembership
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
+public enum DocumentStatus
+{
+    Pending = 0,
+    Processing = 1,
+    Completed = 2,
+    Failed = 3,
+}
+
 public class Document
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -40,6 +48,27 @@ public class Document
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? UpdatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
+    public DocumentStatus Status { get; set; } = DocumentStatus.Pending;
+    public string? FailureCode { get; set; }
+    public string? FailureMessage { get; set; }
+    public DateTimeOffset? ProcessingStartedAt { get; set; }
+    public DateTimeOffset? ProcessingLeaseUntil { get; set; }
+    public int Attempts { get; set; }
+}
+
+// Derived text; never returned by any API in this feature. Always carries the document's tenant.
+public class DocumentChunk
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid DocumentId { get; set; }
+    public int Ordinal { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public int? PageStart { get; set; }
+    public int? PageEnd { get; set; }
+    public string? SheetName { get; set; }
+    public int? RowStart { get; set; }
+    public int? RowEnd { get; set; }
 }
 
 public class AuditEvent

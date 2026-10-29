@@ -7,3 +7,9 @@ th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; }
 .pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
 .message { color: #1b5e20; }
 .error { color: #b00020; }
+
+.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 1rem; font-size: 0.8rem; background: #eee; }
+.badge.processing { background: #e3f2fd; color: #0d47a1; }
+.badge.completed { background: #e8f5e9; color: #1b5e20; }
+.badge.failed { background: #ffebee; color: #b00020; }
+.reason { display: block; color: #b00020; }

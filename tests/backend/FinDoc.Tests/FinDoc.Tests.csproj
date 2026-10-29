@@ -18,12 +18,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Processing\Fixtures\*.pdf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\backend\FinDoc.Api\FinDoc.Api.csproj" />
     <ProjectReference Include="..\..\..\src\backend\FinDoc.Application\FinDoc.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\backend\FinDoc.Infrastructure\FinDoc.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\backend\FinDoc.Domain\FinDoc.Domain.csproj" />
   </ItemGroup>
 

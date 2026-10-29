@@ -19,6 +19,8 @@ public interface IDocumentStore
     Task<TenantMembership?> GetMembershipAsync(string userId, CancellationToken ct);
     Task<Document?> GetAsync(Guid tenantId, Guid id, CancellationToken ct);
     Task<(IReadOnlyList<Document> Items, int Total)> ListAsync(Guid tenantId, int skip, int take, CancellationToken ct);
+    // Atomically moves a Failed, non-deleted document back to Pending; false if it was in any other state.
+    Task<bool> TryRetryAsync(Guid tenantId, Guid id, CancellationToken ct);
     void Add(Document document);
     void AddAudit(AuditEvent auditEvent);
     Task SaveChangesAsync(CancellationToken ct);

@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { AccessService } from '../core/access.service';
 import { AuthService } from '../core/auth.service';
 import { ALLOWED_EXTENSIONS, DocumentItem, DocumentsService, MAX_UPLOAD_BYTES } from './documents.service';
 
@@ -15,6 +16,7 @@ const PAGE_SIZE = 10;
 export class DocumentsComponent implements OnInit {
   private readonly api = inject(DocumentsService);
   private readonly auth = inject(AuthService);
+  private readonly access = inject(AccessService);
 
   readonly items = signal<DocumentItem[]>([]);
   readonly total = signal(0);
@@ -25,6 +27,7 @@ export class DocumentsComponent implements OnInit {
   readonly editingId = signal<string | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
+  readonly canRetry = computed(() => ['TenantAdmin', 'DocumentManager'].includes(this.access.me()?.role ?? ''));
   readonly accept = ALLOWED_EXTENSIONS.join(',');
 
   ngOnInit(): void {
@@ -116,6 +119,24 @@ export class DocumentsComponent implements OnInit {
         this.load();
       },
       error: (e) => this.fail(e, 'Delete failed.'),
+    });
+  }
+
+  retry(doc: DocumentItem): void {
+    this.clearMessages();
+    this.api.retry(doc.id).subscribe({
+      next: () => {
+        this.message.set('Processing will be retried.');
+        this.load();
+      },
+      error: (e: HttpErrorResponse) => {
+        if (e.status === 409 && typeof e.error?.detail === 'string') {
+          this.error.set(e.error.detail);
+          this.load();
+        } else {
+          this.fail(e, 'Could not retry the document.');
+        }
+      },
     });
   }
 

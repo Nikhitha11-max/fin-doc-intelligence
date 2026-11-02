@@ -13,6 +13,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> Chunks => Set<DocumentChunk>();
     public DbSet<ChunkEmbedding> ChunkEmbeddings => Set<ChunkEmbedding>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ConversationMessage> ConversationMessages => Set<ConversationMessage>();
+    public DbSet<ConversationCitation> ConversationCitations => Set<ConversationCitation>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -65,6 +68,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(x => x.Model).HasMaxLength(100);
             e.HasIndex(x => new { x.TenantId, x.DocumentId });
             e.HasOne<DocumentChunk>().WithOne().HasForeignKey<ChunkEmbedding>(x => x.ChunkId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Conversation>(e =>
+        {
+            e.Property(x => x.OwnerUserId).HasMaxLength(450);
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.OwnerUserId, x.UpdatedAt });
+            e.HasIndex(x => x.ExpiresAt);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany<ConversationMessage>().WithOne().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ConversationMessage>(e =>
+        {
+            e.Property(x => x.Role).HasMaxLength(20);
+            e.HasMany<ConversationCitation>().WithOne().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ConversationCitation>(e =>
+        {
+            e.Property(x => x.SheetName).HasMaxLength(255);
+            e.HasIndex(x => x.DocumentId);
             e.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
         });
 

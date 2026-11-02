@@ -84,6 +84,40 @@ public class DocumentChunk
     public int? RowEnd { get; set; }
 }
 
+public class Conversation
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public string OwnerUserId { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ExpiresAt { get; set; }
+}
+
+public class ConversationMessage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ConversationId { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public int CitationCount { get; set; }
+}
+
+public class ConversationCitation
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid MessageId { get; set; }
+    public Guid DocumentId { get; set; }
+    public Guid ChunkId { get; set; }
+    public int? PageStart { get; set; }
+    public int? PageEnd { get; set; }
+    public string? SheetName { get; set; }
+    public int? RowStart { get; set; }
+    public int? RowEnd { get; set; }
+}
+
 public class AuditEvent
 {
     public Guid Id { get; set; } = Guid.NewGuid();

@@ -567,7 +567,7 @@ These decisions should be recorded rather than guessed by the coding agent.
 11. **Compliance:** Which regulatory, contractual, or organizational obligations apply?
 12. **Operational targets:** What are the expected user count, document volume, file sizes, latency targets, and availability needs?
 13. **Backups:** What are the required recovery-point and recovery-time objectives?
-14. **AI history:** Should conversations be saved, and can users delete them?
+14. **AI history:** Conversations are saved privately for their owner and automatically hard-deleted after 90 days. User-initiated deletion is not approved.
 15. **Human review:** Which use cases require a human to verify AI output before acting on it?
 
 Until these are confirmed, use safe development defaults and mark unresolved choices clearly.

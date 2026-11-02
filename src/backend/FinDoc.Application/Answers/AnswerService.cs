@@ -1,4 +1,5 @@
 using FinDoc.Application.Abstractions;
+using FinDoc.Application.Conversations;
 using FinDoc.Application.Search;
 using FinDoc.Domain.Entities;
 
@@ -12,6 +13,7 @@ public sealed class AnswerService(
     IAnswerProvider provider,
     CitationValidator citationValidator,
     IAnswerAuditStore audit,
+    ConversationService conversations,
     AnswerOptions options)
 {
     private static readonly TenantRole[] Readers =
@@ -25,6 +27,8 @@ public sealed class AnswerService(
         var question = request.Question.Trim();
         if (question.Length > options.MaxQuestionLength)
             throw new ValidationFailedException($"The question must be {options.MaxQuestionLength} characters or fewer.");
+        if (request.ConversationId is Guid conversationId)
+            await conversations.EnsureCanAppendAsync(conversationId, ct);
 
         var response = await search.SearchAsync(new SearchRequest(question, options.MaxPassages), ct);
         var retrieved = response.Results
@@ -34,7 +38,7 @@ public sealed class AnswerService(
         if (retrieved.Count == 0)
         {
             await audit.RecordAsync(caller.TenantId, caller.UserId, [], ct);
-            return InsufficientEvidence();
+            return await SaveConversationAsync(request.ConversationId, question, InsufficientEvidence(), ct);
         }
 
         AnswerProviderResult result;
@@ -66,14 +70,24 @@ public sealed class AnswerService(
         if (citations.Count == 0 || string.IsNullOrWhiteSpace(result.Answer))
         {
             await audit.RecordAsync(caller.TenantId, caller.UserId, [], ct);
-            return InsufficientEvidence();
+            return await SaveConversationAsync(request.ConversationId, question, InsufficientEvidence(), ct);
         }
 
         var answer = result.Answer.Length <= options.MaxAnswerLength
             ? result.Answer
             : result.Answer[..options.MaxAnswerLength];
         await audit.RecordAsync(caller.TenantId, caller.UserId, citations.Select(citation => citation.DocumentId).Distinct().ToList(), ct);
-        return new AnswerResponse(answer, false, citations);
+        return await SaveConversationAsync(request.ConversationId, question, new AnswerResponse(answer, false, citations), ct);
+    }
+
+    private async Task<AnswerResponse> SaveConversationAsync(
+        Guid? conversationId,
+        string question,
+        AnswerResponse answer,
+        CancellationToken ct)
+    {
+        var savedId = await conversations.SaveExchangeAsync(conversationId, question, answer, ct);
+        return answer with { ConversationId = savedId };
     }
 
     private async Task<(Guid TenantId, string UserId)> AuthorizeAsync(CancellationToken ct)

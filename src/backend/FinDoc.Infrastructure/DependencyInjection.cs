@@ -1,11 +1,13 @@
 using FinDoc.Application.Abstractions;
 using FinDoc.Application.Answers;
+using FinDoc.Application.Conversations;
 using FinDoc.Application.Access;
 using FinDoc.Application.Documents;
 using FinDoc.Application.Processing;
 using FinDoc.Application.Search;
 using FinDoc.Infrastructure.Embeddings;
 using FinDoc.Infrastructure.Answers;
+using FinDoc.Infrastructure.Conversations;
 using FinDoc.Infrastructure.Processing;
 using FinDoc.Infrastructure.Persistence;
 using FinDoc.Infrastructure.Storage;
@@ -74,7 +76,20 @@ public static class DependencyInjection
         services.AddSingleton<CitationValidator>();
         services.AddSingleton<IAnswerProvider, FakeAnswerProvider>();
         services.AddScoped<IAnswerAuditStore, AnswerAuditStore>();
+        services.AddScoped<IConversationStore, ConversationStore>();
+        services.AddScoped<ConversationService>();
         services.AddScoped<AnswerService>();
+
+        var history = new HistoryOptions();
+        config.GetSection("History").Bind(history);
+        if (history.RetentionDays is < 1 or > 3650
+            || history.MaxPageSize is < 1 or > 100
+            || history.CleanupInterval <= TimeSpan.Zero)
+            throw new InvalidOperationException("The History configuration contains invalid limits or intervals.");
+        services.AddSingleton(history);
+        services.AddScoped<ConversationCleanupService>();
+        if (history.WorkerEnabled)
+            services.AddHostedService<ConversationCleanupWorker>();
 
         services.AddScoped<MemberService>();
         services.AddScoped<PlatformTenantService>();

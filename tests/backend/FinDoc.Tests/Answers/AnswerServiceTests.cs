@@ -1,5 +1,6 @@
 using FinDoc.Application.Abstractions;
 using FinDoc.Application.Answers;
+using FinDoc.Application.Conversations;
 using FinDoc.Application.Search;
 using FinDoc.Domain.Entities;
 
@@ -47,6 +48,41 @@ public class AnswerServiceTests
         }
     }
 
+    private sealed class ConversationStore : IConversationStore
+    {
+        public List<(Guid Id, string Question, AnswerResponse Answer)> Exchanges { get; } = [];
+
+        public Task<(IReadOnlyList<ConversationListItem> Items, int Total)> ListAsync(
+            Guid tenantId, string ownerUserId, int skip, int take, DateTimeOffset now, CancellationToken ct) =>
+            Task.FromResult<(IReadOnlyList<ConversationListItem>, int)>(([], 0));
+
+        public Task<ConversationSnapshot?> GetAsync(
+            Guid tenantId, string ownerUserId, Guid id, DateTimeOffset now, CancellationToken ct) =>
+            Task.FromResult<ConversationSnapshot?>(null);
+
+        public Task<bool> CanAppendAsync(
+            Guid tenantId, string ownerUserId, Guid id, DateTimeOffset now, CancellationToken ct) =>
+            Task.FromResult(Exchanges.Any(exchange => exchange.Id == id));
+
+        public Task<Guid?> SaveExchangeAsync(
+            Guid tenantId,
+            string ownerUserId,
+            Guid? conversationId,
+            string question,
+            AnswerResponse answer,
+            int retentionDays,
+            CancellationToken ct)
+        {
+            var id = conversationId ?? Guid.NewGuid();
+            if (conversationId is not null && !Exchanges.Any(exchange => exchange.Id == id))
+                return Task.FromResult<Guid?>(null);
+            Exchanges.Add((id, question, answer));
+            return Task.FromResult<Guid?>(id);
+        }
+
+        public Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken ct) => Task.FromResult(0);
+    }
+
     [Fact]
     public async Task Answer_cites_only_retrieved_passages_and_audits_cited_document_ids()
     {
@@ -75,6 +111,8 @@ public class AnswerServiceTests
         Assert.Equal(fixture.SearchStore.TenantId, fixture.Audit.Records[0].TenantId);
         Assert.Equal([documentId], fixture.Audit.Records[0].Documents);
         Assert.Equal("analyst", fixture.Audit.Records[0].Actor);
+        Assert.NotNull(response.ConversationId);
+        Assert.Single(fixture.Conversations.Exchanges);
     }
 
     [Fact]
@@ -91,6 +129,7 @@ public class AnswerServiceTests
         Assert.Empty(response.Citations);
         Assert.Equal(0, fixture.Provider.Calls);
         Assert.Empty(Assert.Single(fixture.Audit.Records).Documents);
+        Assert.Single(fixture.Conversations.Exchanges);
     }
 
     [Fact]
@@ -119,6 +158,18 @@ public class AnswerServiceTests
         fixture.User.UserId = null;
         await Assert.ThrowsAsync<ForbiddenException>(() => fixture.Service.AnswerAsync(new AskRequest("question"), default));
         Assert.Equal(0, fixture.SearchStore.Calls);
+    }
+
+    [Fact]
+    public async Task Another_owners_conversation_is_rejected_before_search_or_provider_call()
+    {
+        var fixture = Create([], new Provider((_, _) => throw new InvalidOperationException()));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            fixture.Service.AnswerAsync(new AskRequest("private question", Guid.NewGuid()), default));
+
+        Assert.Equal(0, fixture.SearchStore.Calls);
+        Assert.Equal(0, fixture.Provider.Calls);
     }
 
     [Fact]
@@ -169,7 +220,8 @@ public class AnswerServiceTests
         SearchStore SearchStore,
         Provider Provider,
         AuditStore Audit,
-        FakeUser User) Create(IReadOnlyList<SearchHit> hits, Provider provider)
+        FakeUser User,
+        ConversationStore Conversations) Create(IReadOnlyList<SearchHit> hits, Provider provider)
     {
         var tenantId = Guid.NewGuid();
         var user = new FakeUser { UserId = "analyst" };
@@ -183,9 +235,11 @@ public class AnswerServiceTests
             new EmbeddingOptions(),
             user);
         var audit = new AuditStore();
+        var conversationStore = new ConversationStore();
+        var conversationService = new ConversationService(documents, conversationStore, user, new HistoryOptions());
         var options = new AnswerOptions();
         var service = new AnswerService(
-            documents, user, search, new PromptBuilder(), provider, new CitationValidator(), audit, options);
-        return (service, searchStore, provider, audit, user);
+            documents, user, search, new PromptBuilder(), provider, new CitationValidator(), audit, conversationService, options);
+        return (service, searchStore, provider, audit, user, conversationStore);
     }
 }

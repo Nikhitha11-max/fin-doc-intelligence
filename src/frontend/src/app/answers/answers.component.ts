@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { AnswerCitation, AnswerResponse, AnswersService } from './answers.service';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AnswerCitation, AnswerResponse, AnswersService, ConversationMessage } from './answers.service';
 
 @Component({
   selector: 'app-answers',
@@ -30,6 +31,23 @@ import { AnswerCitation, AnswerResponse, AnswersService } from './answers.servic
           }
         </section>
       }
+      @if (messages().length > 0) {
+        <section class="history" aria-label="Conversation history">
+          @for (message of messages(); track message.id) {
+            <article>
+              <h2>{{ message.role === 'user' ? 'You' : 'Answer' }}</h2>
+              <p class="answer">{{ message.text }}</p>
+              @if (message.citations.length > 0) {
+                <ul>
+                  @for (citation of message.citations; track citation.chunkId) {
+                    <li><strong>{{ citation.documentTitle }}</strong> · {{ source(citation) }}</li>
+                  }
+                </ul>
+              }
+            </article>
+          }
+        </section>
+      }
     </main>
   `,
   styles: `
@@ -40,16 +58,29 @@ import { AnswerCitation, AnswerResponse, AnswersService } from './answers.servic
     label, textarea { display: block; width: 100%; }
     textarea { box-sizing: border-box; margin: 0.4rem 0 0.8rem; padding: 0.6rem; }
     .answer { white-space: pre-wrap; }
+    .history article { border-top: 1px solid #ddd; padding: 0.5rem 0; }
     .insufficient, .note { color: #555; }
     .error { color: #b00020; }
   `,
 })
-export class AnswersComponent {
+export class AnswersComponent implements OnInit {
   private readonly api = inject(AnswersService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly response = signal<AnswerResponse | null>(null);
+  readonly messages = signal<ConversationMessage[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
+  private conversationId: string | undefined;
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.queryParamMap.get('conversationId');
+    if (id) {
+      this.conversationId = id;
+      this.loadConversation(id);
+    }
+  }
 
   ask(question: string): void {
     if (!question.trim()) {
@@ -61,9 +92,17 @@ export class AnswersComponent {
     this.loading.set(true);
     this.error.set('');
     this.response.set(null);
-    this.api.ask(question.trim()).subscribe({
+    this.api.ask(question.trim(), this.conversationId).subscribe({
       next: (result) => {
         this.response.set(result);
+        this.conversationId = result.conversationId;
+        void this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { conversationId: result.conversationId },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+        this.loadConversation(result.conversationId);
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {
@@ -75,6 +114,20 @@ export class AnswersComponent {
             : e.status === 503
               ? 'The answer provider is temporarily unavailable.'
               : 'Unable to answer the question. Please try again.');
+      },
+    });
+  }
+
+  private loadConversation(id: string): void {
+    this.api.get(id).subscribe({
+      next: (conversation) => {
+        this.messages.set(conversation.messages);
+        this.response.set(null);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.error.set(e.status === 404 || e.status === 403
+          ? 'This conversation is no longer available.'
+          : 'Unable to load this conversation.');
       },
     });
   }

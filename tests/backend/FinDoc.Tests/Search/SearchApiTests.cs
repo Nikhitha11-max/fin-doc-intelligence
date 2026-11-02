@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using FinDoc.Application.Search;
 using FinDoc.Application.Answers;
+using FinDoc.Application.Conversations;
 using FinDoc.Application.Processing;
 using FinDoc.Domain.Entities;
 using FinDoc.Infrastructure.Persistence;
@@ -75,6 +76,7 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
                 host.UseSetting("Bootstrap:PlatformAdminPassword", Password);
                 host.UseSetting("Processing:WorkerEnabled", "false");
                 host.UseSetting("Embeddings:WorkerEnabled", "false");
+                host.UseSetting("History:WorkerEnabled", "false");
                 host.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IAnswerProvider>();
@@ -328,6 +330,7 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
         var documentId = await UploadCsvAsync(tenant.Admin, "revenue.csv", "revenue,increased,10,percent");
         await DrainProcessingAsync();
         await DrainIndexingAsync();
+        _fixture.AnswerProvider.Reset();
 
         var response = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "revenue increased 10 percent" });
 
@@ -422,6 +425,149 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
         var audit = Assert.Single(await AnswerAuditEventsAsync(tenant.Id));
         Assert.Null(audit.DocumentId);
         Assert.Null(audit.Detail);
+    }
+
+    [Fact]
+    public async Task Conversations_append_and_list_only_for_the_owner_with_paging()
+    {
+        var tenant = await CreateTenantAsync();
+        await UploadCsvAsync(tenant.Admin, "revenue.csv", "revenue,increased,10,percent");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+        _fixture.AnswerProvider.Reset();
+
+        var firstAnswer = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "revenue increased" });
+        Assert.Equal(HttpStatusCode.OK, firstAnswer.StatusCode);
+        var firstConversationId = (await firstAnswer.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("conversationId").GetGuid();
+
+        var secondAnswer = await tenant.Analyst.PostAsJsonAsync("/api/answers", new
+        {
+            question = "revenue 10 percent",
+            conversationId = firstConversationId,
+        });
+        Assert.Equal(HttpStatusCode.OK, secondAnswer.StatusCode);
+        Assert.Equal(firstConversationId, (await secondAnswer.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("conversationId").GetGuid());
+
+        var newAnswer = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "revenue increased" });
+        var newestConversationId = (await newAnswer.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("conversationId").GetGuid();
+        Assert.NotEqual(firstConversationId, newestConversationId);
+
+        var conversationResponse = await tenant.Analyst.GetAsync($"/api/conversations/{firstConversationId}");
+        Assert.Equal(HttpStatusCode.OK, conversationResponse.StatusCode);
+        var conversation = await conversationResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(4, conversation.GetProperty("messages").GetArrayLength());
+
+        var listResponse = await tenant.Analyst.GetAsync("/api/conversations?page=1&pageSize=1");
+        var list = await listResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, list.GetProperty("total").GetInt32());
+        Assert.Equal(newestConversationId, list.GetProperty("items")[0].GetProperty("id").GetGuid());
+        Assert.Single(list.GetProperty("items").EnumerateArray());
+        var conversationAudits = await WithDbAsync(db => db.AuditEvents
+            .Where(item => item.TenantId == tenant.Id && item.Action.StartsWith("conversation."))
+            .ToListAsync());
+        Assert.All(conversationAudits, item =>
+        {
+            Assert.Null(item.Detail);
+            Assert.Null(item.DocumentId);
+            Assert.Null(item.TargetUserId);
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, (await tenant.Admin.GetAsync($"/api/conversations/{firstConversationId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await (await CreateTenantAsync()).Analyst
+            .GetAsync($"/api/conversations/{firstConversationId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, (await tenant.Analyst
+            .DeleteAsync($"/api/conversations/{firstConversationId}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Deleted_source_documents_hide_citations_and_redact_saved_answers()
+    {
+        var tenant = await CreateTenantAsync();
+        var documentId = await UploadCsvAsync(tenant.Admin, "revenue.csv", "revenue,increased,10,percent");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+        _fixture.AnswerProvider.Reset();
+
+        var answerResponse = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "revenue increased" });
+        var conversationId = (await answerResponse.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("conversationId").GetGuid();
+        var beforeDelete = await (await tenant.Analyst.GetAsync($"/api/conversations/{conversationId}"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Single(beforeDelete.GetProperty("messages")[1].GetProperty("citations").EnumerateArray());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await tenant.Admin.DeleteAsync($"/api/documents/{documentId}")).StatusCode);
+        var afterDelete = await (await tenant.Analyst.GetAsync($"/api/conversations/{conversationId}"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        var assistantMessage = afterDelete.GetProperty("messages")[1];
+        Assert.Empty(assistantMessage.GetProperty("citations").EnumerateArray());
+        Assert.Contains("hidden", assistantMessage.GetProperty("text").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Removing_a_member_revokes_conversation_history_access()
+    {
+        var tenant = await CreateTenantAsync();
+        var memberResponse = await tenant.Admin.PostAsJsonAsync("/api/members", new
+        {
+            email = $"history-{Guid.NewGuid():N}@test.local",
+            password = Password,
+            role = "Analyst",
+        });
+        var member = await memberResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var user = await LoginAsync(member.GetProperty("email").GetString()!);
+        var answer = await user.PostAsJsonAsync("/api/answers", new { question = "no evidence question" });
+        var conversationId = (await answer.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("conversationId").GetGuid();
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await tenant.Admin.DeleteAsync($"/api/members/{member.GetProperty("userId").GetString()}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync($"/api/conversations/{conversationId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync("/api/conversations")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Expired_conversations_are_hidden_and_cleanup_hard_deletes_their_contents()
+    {
+        var tenant = await CreateTenantAsync();
+        await UploadCsvAsync(tenant.Admin, "revenue.csv", "revenue,increased,10,percent");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+        _fixture.AnswerProvider.Reset();
+        var answer = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "revenue increased" });
+        var conversationId = (await answer.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("conversationId").GetGuid();
+        await WithDbAsync(async db =>
+        {
+            var conversation = await db.Conversations.SingleAsync(item => item.Id == conversationId);
+            conversation.ExpiresAt = DateTimeOffset.UtcNow.AddDays(-1);
+            await db.SaveChangesAsync();
+            return 0;
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await tenant.Analyst.GetAsync($"/api/conversations/{conversationId}")).StatusCode);
+        var list = await (await tenant.Analyst.GetAsync("/api/conversations")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.DoesNotContain(list.GetProperty("items").EnumerateArray(),
+            item => item.GetProperty("id").GetGuid() == conversationId);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var cleanup = scope.ServiceProvider.GetRequiredService<ConversationCleanupService>();
+            Assert.Equal(1, await cleanup.CleanupExpiredAsync(default));
+        }
+        Assert.Equal(0, await WithDbAsync(db => db.Conversations.CountAsync(item => item.Id == conversationId)));
+        Assert.Equal(0, await WithDbAsync(db => db.ConversationMessages.CountAsync(message =>
+            message.ConversationId == conversationId)));
+        Assert.Equal(0, await WithDbAsync(async db =>
+        {
+            var messageIds = db.ConversationMessages
+                .Where(message => message.ConversationId == conversationId)
+                .Select(message => message.Id);
+            return await db.ConversationCitations.CountAsync(citation => messageIds.Contains(citation.MessageId));
+        }));
     }
 
     [Fact]

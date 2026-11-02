@@ -2,9 +2,9 @@
 
 **Feature Branch**: `006-conversation-history`
 **Created**: 2026-10-28
-**Status**: Draft
+**Status**: Approved
 **Depends on**: 005
-**Decision needed**: README decision 14 — is history approved? This spec assumes yes; if not, defer and add no persistence.
+**Product decision**: History is approved with a 90-day default automatic retention. User-initiated deletion is not approved.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -24,12 +24,6 @@ Reopening a conversation re-checks current document permissions; citations to do
 1. **Given** a cited document later deleted, **Then** the citation and its text are hidden.
 2. **Given** a user removed from the tenant, **Then** all conversations become inaccessible.
 
-### User Story 3 - Delete my conversation (Priority: P2)
-A user can delete their own conversation; deleted content is no longer retrievable.
-
-**Acceptance Scenarios**:
-1. **Given** a deletion, **Then** the conversation disappears for the owner and no one else could see it before or after.
-
 ### Edge Cases
 - Guessing another user's or tenant's conversation id returns not found.
 - Retention period expiry removes old conversations.
@@ -40,15 +34,16 @@ A user can delete their own conversation; deleted content is no longer retrievab
 - **FR-002**: Other users, including Tenant Administrators, MUST NOT read a conversation (no sharing in this feature).
 - **FR-003**: Loading a conversation MUST re-check current membership and document access; revoked citations MUST be hidden.
 - **FR-004**: Identifiers MUST NOT reveal existence of other users' conversations (404).
-- **FR-005**: Users MUST be able to delete their own conversations; deletion MUST be audited without content.
-- **FR-006**: A retention period MUST be configurable and enforced.
-- **FR-007**: Logs and audit records MUST NOT contain question or answer text.
-- **FR-008**: Lists MUST be paginated with a capped size.
+- **FR-005**: Conversations MUST expire after the configured retention period and MUST be hard-deleted with their messages and citations.
+- **FR-006**: Logs and audit records MUST NOT contain question or answer text.
+- **FR-007**: Lists MUST be paginated with a capped size.
 
 ## Success Criteria
 - **SC-001**: A user cannot read, change or delete another user's conversation in any test.
 - **SC-002**: Revoked document access is never bypassed by saved citations.
-- **SC-003**: Deleted and expired conversations are unrecoverable through the API.
+- **SC-003**: Expired conversations are unrecoverable through the API.
+- **SC-004**: Answers associated with any no-longer-visible citation are redacted on read.
 
 ## Assumptions
-- History is approved, private to the owner, with a default retention of 90 days (confirm with product owner).
+- History is approved, private to the owner, with a 90-day default retention period.
+- User-initiated deletion is not approved; conversations are deleted only by retention cleanup.

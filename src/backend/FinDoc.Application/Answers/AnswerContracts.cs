@@ -32,7 +32,7 @@ public interface IAnswerAuditStore
     Task RecordAsync(Guid tenantId, string actorUserId, IReadOnlyList<Guid> citedDocumentIds, CancellationToken ct);
 }
 
-public sealed record AskRequest(string? Question);
+public sealed record AskRequest(string? Question, Guid? ConversationId = null);
 
 public sealed record AnswerCitation(
     Guid DocumentId,
@@ -44,7 +44,11 @@ public sealed record AnswerCitation(
     int? RowStart,
     int? RowEnd);
 
-public sealed record AnswerResponse(string Answer, bool InsufficientEvidence, IReadOnlyList<AnswerCitation> Citations);
+public sealed record AnswerResponse(
+    string Answer,
+    bool InsufficientEvidence,
+    IReadOnlyList<AnswerCitation> Citations,
+    Guid? ConversationId = null);
 
 public static class AnswerMessages
 {

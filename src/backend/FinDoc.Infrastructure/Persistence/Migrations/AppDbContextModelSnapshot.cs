@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pgvector;
 
 #nullable disable
 
@@ -20,6 +21,7 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "8.0.33")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("FinDoc.Domain.Entities.AuditEvent", b =>
@@ -89,6 +91,23 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("IndexFailureCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("IndexFailureMessage")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("IndexStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IndexingAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("IndexingLeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("OriginalFileName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -136,6 +155,8 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status", "CreatedAt");
 
                     b.HasIndex("TenantId", "CreatedAt");
+
+                    b.HasIndex("IndexStatus", "Status", "CreatedAt");
 
                     b.ToTable("Documents");
                 });
@@ -238,6 +259,38 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Memberships");
+                });
+
+            modelBuilder.Entity("FinDoc.Infrastructure.Persistence.ChunkEmbedding", b =>
+                {
+                    b.Property<Guid>("ChunkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Vector>("Vector")
+                        .IsRequired()
+                        .HasColumnType("vector(1536)");
+
+                    b.HasKey("ChunkId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("TenantId", "DocumentId");
+
+                    b.ToTable("ChunkEmbeddings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -459,6 +512,21 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                     b.HasOne("FinDoc.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinDoc.Infrastructure.Persistence.ChunkEmbedding", b =>
+                {
+                    b.HasOne("FinDoc.Domain.Entities.DocumentChunk", null)
+                        .WithOne()
+                        .HasForeignKey("FinDoc.Infrastructure.Persistence.ChunkEmbedding", "ChunkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinDoc.Domain.Entities.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

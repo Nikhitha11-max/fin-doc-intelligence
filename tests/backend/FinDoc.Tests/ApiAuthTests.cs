@@ -10,6 +10,7 @@ public class ApiAuthTests(WebApplicationFactory<Program> factory) : IClassFixtur
     [InlineData("GET", "/api/documents")]
     [InlineData("GET", "/api/documents/00000000-0000-0000-0000-000000000001")]
     [InlineData("GET", "/api/documents/00000000-0000-0000-0000-000000000001/download")]
+    [InlineData("POST", "/api/search")]
     [InlineData("PUT", "/api/documents/00000000-0000-0000-0000-000000000001")]
     [InlineData("DELETE", "/api/documents/00000000-0000-0000-0000-000000000001")]
     [InlineData("POST", "/api/documents")]

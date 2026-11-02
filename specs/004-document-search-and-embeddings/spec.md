@@ -2,7 +2,7 @@
 
 **Feature Branch**: `004-document-search-and-embeddings`
 **Created**: 2026-10-28
-**Status**: Draft
+**Status**: Implemented
 **Depends on**: 003 (chunks), 002 (roles), 001 (tenant-scoped documents)
 
 ## User Scenarios & Testing *(mandatory)*
@@ -63,5 +63,6 @@ Soft-deleting a document removes its passages from search at once. Re-indexing r
 - **SC-005**: Search over a 10,000-passage tenant returns in under 2 seconds.
 
 ## Assumptions
-- Provider/model and vector dimension are chosen in planning (default: a configurable dimension, pgvector with cosine similarity); the decision must be confirmed before wiring a real provider.
-- Search is available to all four roles that can view documents.
+- The confirmed provider decision for this feature is fake-only: deterministic local token hashing, no model, external API, network call, or provider credential. This is a development/test search implementation, not semantic AI; a real model requires a separate product/privacy decision.
+- Vector dimension is fixed at 1536 to match the migration and fake provider. Changing it requires a schema migration.
+- Search is available to the roles that can view documents under feature 001 (Tenant Administrator, Document Manager and Analyst). Auditors cannot view documents under feature 001 and therefore cannot search.

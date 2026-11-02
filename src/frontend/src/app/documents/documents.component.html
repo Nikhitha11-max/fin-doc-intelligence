@@ -24,7 +24,7 @@
 } @else {
   <table>
     <thead>
-      <tr><th>Title</th><th>File</th><th>Status</th><th>Size</th><th>Uploaded</th><th></th></tr>
+      <tr><th>Title</th><th>File</th><th>Status</th><th>Search index</th><th>Size</th><th>Uploaded</th><th></th></tr>
     </thead>
     <tbody>
       @for (doc of items(); track doc.id) {
@@ -45,11 +45,20 @@
               <small class="reason">{{ doc.failureMessage }}</small>
             }
           </td>
+          <td>
+            <span class="badge" [class]="'badge ' + doc.indexStatus.toLowerCase()">{{ doc.indexStatus }}</span>
+            @if (doc.indexStatus === 'IndexFailed' && doc.indexFailureMessage) {
+              <small class="reason">{{ doc.indexFailureMessage }}</small>
+            }
+          </td>
           <td>{{ formatSize(doc.sizeBytes) }}</td>
           <td>{{ doc.createdAt | date: 'medium' }}</td>
           <td class="actions">
             @if (doc.status === 'Failed' && canRetry()) {
               <button type="button" (click)="retry(doc)">Retry</button>
+            }
+            @if (doc.status === 'Completed' && (doc.indexStatus === 'Indexed' || doc.indexStatus === 'IndexFailed') && canRetry()) {
+              <button type="button" (click)="reindex(doc)">Re-index</button>
             }
             <button type="button" (click)="download(doc)">Download</button>
             <button type="button" (click)="editingId.set(doc.id)">Rename</button>

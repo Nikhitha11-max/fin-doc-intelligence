@@ -9,6 +9,7 @@ import { DocumentItem } from './documents.service';
 const doc = (id: string, title: string): DocumentItem => ({
   id, title, fileName: `${title}.pdf`, extension: '.pdf', sizeBytes: 2048, createdAt: '2026-01-01T00:00:00Z', updatedAt: null,
   status: 'Completed', failureCode: null, failureMessage: null,
+  indexStatus: 'Indexed', indexFailureCode: null, indexFailureMessage: null,
 });
 
 describe('DocumentsComponent', () => {
@@ -99,5 +100,17 @@ describe('DocumentsComponent', () => {
     fixture.detectChanges();
     expect(retryButtons().length).toBe(0);
     expect(fixture.componentInstance.message()).toContain('retried');
+  });
+
+  it('shows index state and permits re-index only for managers', () => {
+    const notIndexed = { ...doc('d10', 'Queued'), indexStatus: 'NotIndexed' as const };
+    const failedIndex = { ...doc('d11', 'Index failed'), indexStatus: 'IndexFailed' as const, indexFailureCode: 'provider_unavailable', indexFailureMessage: 'Provider unavailable.' };
+    flushList([notIndexed, failedIndex]);
+    setRole('Analyst');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('NotIndexed');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Provider unavailable.');
+    expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).some((b) => b.textContent?.trim() === 'Re-index')).toBeFalse();
+    setRole('DocumentManager');
+    expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).some((b) => b.textContent?.trim() === 'Re-index')).toBeTrue();
   });
 });

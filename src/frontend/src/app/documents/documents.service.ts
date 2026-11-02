@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export type DocumentStatus = 'Pending' | 'Processing' | 'Completed' | 'Failed';
+export type IndexStatus = 'NotIndexed' | 'Indexing' | 'Indexed' | 'IndexFailed';
 
 export interface DocumentItem {
   id: string;
@@ -15,6 +16,9 @@ export interface DocumentItem {
   status: DocumentStatus;
   failureCode: string | null;
   failureMessage: string | null;
+  indexStatus: IndexStatus;
+  indexFailureCode: string | null;
+  indexFailureMessage: string | null;
 }
 
 export interface PagedResult<T> {
@@ -51,6 +55,10 @@ export class DocumentsService {
 
   retry(id: string): Observable<DocumentItem> {
     return this.http.post<DocumentItem>(`${this.baseUrl}/${id}/retry`, {});
+  }
+
+  reindex(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/reindex`, {});
   }
 
   delete(id: string): Observable<void> {

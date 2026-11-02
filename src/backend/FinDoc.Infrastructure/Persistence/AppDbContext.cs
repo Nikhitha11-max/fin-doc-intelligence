@@ -2,6 +2,7 @@ using FinDoc.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Pgvector.EntityFrameworkCore;
 
 namespace FinDoc.Infrastructure.Persistence;
 
@@ -11,11 +12,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<TenantMembership> Memberships => Set<TenantMembership>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> Chunks => Set<DocumentChunk>();
+    public DbSet<ChunkEmbedding> ChunkEmbeddings => Set<ChunkEmbedding>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.HasPostgresExtension("vector");
 
         builder.Entity<Tenant>(e => e.Property(x => x.Name).HasMaxLength(200));
 
@@ -36,7 +39,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(x => x.FailureCode).HasMaxLength(50);
             e.Property(x => x.FailureMessage).HasMaxLength(200);
             e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.IndexStatus).HasConversion<int>();
+            e.Property(x => x.IndexFailureCode).HasMaxLength(50);
+            e.Property(x => x.IndexFailureMessage).HasMaxLength(200);
             e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => new { x.IndexStatus, x.Status, x.CreatedAt });
             e.HasIndex(x => new { x.TenantId, x.CreatedAt });
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId);
         });
@@ -49,6 +56,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
             // Chunks of soft-deleted documents are invisible to every query.
             e.HasQueryFilter(c => !Documents.Any(d => d.Id == c.DocumentId && d.DeletedAt != null));
+        });
+
+        builder.Entity<ChunkEmbedding>(e =>
+        {
+            e.HasKey(x => x.ChunkId);
+            e.Property(x => x.Vector).HasColumnType("vector(1536)");
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.DocumentId });
+            e.HasOne<DocumentChunk>().WithOne().HasForeignKey<ChunkEmbedding>(x => x.ChunkId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<AuditEvent>(e =>

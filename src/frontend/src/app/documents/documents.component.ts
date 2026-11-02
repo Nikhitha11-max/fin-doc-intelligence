@@ -140,6 +140,17 @@ export class DocumentsComponent implements OnInit {
     });
   }
 
+  reindex(doc: DocumentItem): void {
+    this.clearMessages();
+    this.api.reindex(doc.id).subscribe({
+      next: () => {
+        this.message.set('Document queued for indexing.');
+        this.load();
+      },
+      error: (e: HttpErrorResponse) => this.fail(e, 'Could not queue document indexing.'),
+    });
+  }
+
   logout(): void {
     this.auth.logout();
   }

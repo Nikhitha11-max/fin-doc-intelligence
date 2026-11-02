@@ -40,8 +40,8 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Detail")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<Guid?>("DocumentId")
                         .HasColumnType("uuid");

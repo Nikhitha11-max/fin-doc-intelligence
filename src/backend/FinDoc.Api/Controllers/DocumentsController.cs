@@ -43,6 +43,13 @@ public class DocumentsController(DocumentService documents) : ControllerBase
     [HttpPost("{id:guid}/retry")]
     public Task<DocumentDto> Retry(Guid id, CancellationToken ct) => documents.RetryAsync(id, ct);
 
+    [HttpPost("{id:guid}/reindex")]
+    public async Task<IActionResult> Reindex(Guid id, CancellationToken ct)
+    {
+        await documents.ReindexAsync(id, ct);
+        return Accepted();
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {

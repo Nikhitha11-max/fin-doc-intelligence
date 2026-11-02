@@ -52,6 +52,28 @@ public class FakeStore : IDocumentStore
         return Task.FromResult(true);
     }
 
+    public Task<bool> QueueReindexAsync(Guid tenantId, Guid id, string actorUserId, CancellationToken ct)
+    {
+        var document = Documents.FirstOrDefault(d => d.TenantId == tenantId && d.Id == id && d.DeletedAt == null
+            && d.Status == DocumentStatus.Completed
+            && d.IndexStatus is DocumentIndexStatus.Indexed or DocumentIndexStatus.IndexFailed);
+        if (document is null)
+            return Task.FromResult(false);
+
+        document.IndexStatus = DocumentIndexStatus.NotIndexed;
+        document.IndexFailureCode = null;
+        document.IndexFailureMessage = null;
+        document.IndexingAttempts = 0;
+        Audits.Add(new AuditEvent
+        {
+            TenantId = tenantId,
+            ActorUserId = actorUserId,
+            Action = "document.reindex",
+            DocumentId = id,
+        });
+        return Task.FromResult(true);
+    }
+
     public void Add(Document document) => Documents.Add(document);
     public void AddAudit(AuditEvent auditEvent) => Audits.Add(auditEvent);
     public Task SaveChangesAsync(CancellationToken ct) => Task.CompletedTask;

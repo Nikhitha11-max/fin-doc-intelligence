@@ -34,6 +34,14 @@ public enum DocumentStatus
     Failed = 3,
 }
 
+public enum DocumentIndexStatus
+{
+    NotIndexed = 0,
+    Indexing = 1,
+    Indexed = 2,
+    IndexFailed = 3,
+}
+
 public class Document
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -54,6 +62,11 @@ public class Document
     public DateTimeOffset? ProcessingStartedAt { get; set; }
     public DateTimeOffset? ProcessingLeaseUntil { get; set; }
     public int Attempts { get; set; }
+    public DocumentIndexStatus IndexStatus { get; set; } = DocumentIndexStatus.NotIndexed;
+    public string? IndexFailureCode { get; set; }
+    public string? IndexFailureMessage { get; set; }
+    public DateTimeOffset? IndexingLeaseUntil { get; set; }
+    public int IndexingAttempts { get; set; }
 }
 
 // Derived text; never returned by any API in this feature. Always carries the document's tenant.

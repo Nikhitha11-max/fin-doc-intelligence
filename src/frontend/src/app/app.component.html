@@ -3,6 +3,9 @@
     @if (me.hasAccess) {
       <a routerLink="/documents">Documents</a>
     }
+    @if (me.role === 'TenantAdmin' || me.role === 'DocumentManager' || me.role === 'Analyst') {
+      <a routerLink="/search">Search</a>
+    }
     @if (me.role === 'TenantAdmin') {
       <a routerLink="/team">Team</a>
     }

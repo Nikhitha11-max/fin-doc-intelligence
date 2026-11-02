@@ -37,6 +37,35 @@ public class DocumentStore(AppDbContext db) : IDocumentStore
         return rows == 1;
     }
 
+    public async Task<bool> QueueReindexAsync(Guid tenantId, Guid id, string actorUserId, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var rows = await db.Documents
+            .Where(d => d.TenantId == tenantId && d.Id == id && d.DeletedAt == null
+                && d.Status == DocumentStatus.Completed
+                && (d.IndexStatus == DocumentIndexStatus.Indexed || d.IndexStatus == DocumentIndexStatus.IndexFailed))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(d => d.IndexStatus, DocumentIndexStatus.NotIndexed)
+                .SetProperty(d => d.IndexFailureCode, (string?)null)
+                .SetProperty(d => d.IndexFailureMessage, (string?)null)
+                .SetProperty(d => d.IndexingLeaseUntil, (DateTimeOffset?)null)
+                .SetProperty(d => d.IndexingAttempts, 0), ct);
+        if (rows == 0)
+            return false;
+        await db.ChunkEmbeddings.Where(e => e.TenantId == tenantId && e.DocumentId == id).ExecuteDeleteAsync(ct);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            TenantId = tenantId,
+            ActorUserId = actorUserId,
+            Action = "document.reindex",
+            DocumentId = id,
+        });
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        db.ChangeTracker.Clear();
+        return true;
+    }
+
     public void Add(Document document) => db.Documents.Add(document);
 
     public void AddAudit(AuditEvent auditEvent) => db.AuditEvents.Add(auditEvent);

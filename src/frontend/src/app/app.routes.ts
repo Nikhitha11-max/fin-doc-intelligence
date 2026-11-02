@@ -6,11 +6,13 @@ import { LoginComponent } from './login/login.component';
 import { PlatformComponent } from './platform/platform.component';
 import { TeamComponent } from './team/team.component';
 import { SearchComponent } from './search/search.component';
+import { AnswersComponent } from './answers/answers.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'documents', component: DocumentsComponent, canActivate: [authGuard] },
   { path: 'search', component: SearchComponent, canActivate: [authGuard] },
+  { path: 'answers', component: AnswersComponent, canActivate: [authGuard] },
   { path: 'team', component: TeamComponent, canActivate: [authGuard, tenantAdminGuard] },
   { path: 'platform', component: PlatformComponent, canActivate: [authGuard, platformAdminGuard] },
   { path: '', pathMatch: 'full', redirectTo: 'documents' },

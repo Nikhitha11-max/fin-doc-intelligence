@@ -2,7 +2,7 @@
 
 **Feature Branch**: `005-rag-question-answering-and-citations`
 **Created**: 2026-10-28
-**Status**: Draft
+**Status**: Implemented (fake provider only)
 **Depends on**: 004 (authorized retrieval)
 
 ## User Scenarios & Testing *(mandatory)*
@@ -58,3 +58,5 @@ Instructions inside a document ("ignore previous rules", "reveal other tenants' 
 ## Assumptions
 - Provider and model are decided in planning; a fake provider is used until privacy terms are confirmed.
 - All four roles that can view documents can ask questions.
+- The fake provider selects a matching source sentence by exact word overlap; it is not generative or semantic AI.
+- No real-provider adapter is enabled until provider retention, region, and training terms are approved.

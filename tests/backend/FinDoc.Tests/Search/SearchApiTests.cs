@@ -4,12 +4,15 @@ using System.Net.Http.Json;
 using System.Diagnostics;
 using System.Text.Json;
 using FinDoc.Application.Search;
+using FinDoc.Application.Answers;
 using FinDoc.Application.Processing;
 using FinDoc.Domain.Entities;
 using FinDoc.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 
 namespace FinDoc.Tests.Search;
@@ -19,10 +22,34 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
     private const string Password = "Passw0rd!x";
     private const string PlatformEmail = "root@platform.test";
 
+    public sealed class CapturingAnswerProvider : IAnswerProvider
+    {
+        public AnswerProviderRequest? LastRequest { get; private set; }
+        public int Calls { get; private set; }
+        public bool FailWithSensitiveTimeout { get; set; }
+
+        public void Reset()
+        {
+            LastRequest = null;
+            Calls = 0;
+            FailWithSensitiveTimeout = false;
+        }
+
+        public Task<AnswerProviderResult> AnswerAsync(AnswerProviderRequest request, CancellationToken ct)
+        {
+            LastRequest = request;
+            Calls++;
+            if (FailWithSensitiveTimeout)
+                throw new TimeoutException("private passage: sensitive-revenue-text");
+            return Task.FromResult(new AnswerProviderResult("Captured answer.", [1]));
+        }
+    }
+
     public sealed class Fixture : IAsyncLifetime
     {
         private readonly string _storage = Path.Combine(Path.GetTempPath(), "findoc-search-tests-" + Guid.NewGuid().ToString("N"));
         public WebApplicationFactory<Program> Factory { get; private set; } = null!;
+        public CapturingAnswerProvider AnswerProvider { get; } = new();
 
         public async Task InitializeAsync()
         {
@@ -48,6 +75,11 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
                 host.UseSetting("Bootstrap:PlatformAdminPassword", Password);
                 host.UseSetting("Processing:WorkerEnabled", "false");
                 host.UseSetting("Embeddings:WorkerEnabled", "false");
+                host.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IAnswerProvider>();
+                    services.AddSingleton<IAnswerProvider>(AnswerProvider);
+                });
             });
             _ = Factory.Server;
         }
@@ -290,6 +322,109 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
     }
 
     [Fact]
+    public async Task Answer_returns_only_valid_source_citations_and_audits_without_content()
+    {
+        var tenant = await CreateTenantAsync();
+        var documentId = await UploadCsvAsync(tenant.Admin, "revenue.csv", "revenue,increased,10,percent");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+
+        var response = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "revenue increased 10 percent" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var answer = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(answer.GetProperty("insufficientEvidence").GetBoolean());
+        Assert.Equal("Captured answer.", answer.GetProperty("answer").GetString());
+        var citation = Assert.Single(answer.GetProperty("citations").EnumerateArray());
+        Assert.Equal(documentId, citation.GetProperty("documentId").GetGuid());
+        Assert.Equal(1, citation.GetProperty("rowStart").GetInt32());
+
+        var audit = await AnswerAuditEventsAsync(tenant.Id);
+        var eventForDocument = Assert.Single(audit);
+        Assert.Null(eventForDocument.DocumentId);
+        Assert.NotEqual("system", eventForDocument.ActorUserId);
+        Assert.Equal(documentId.ToString("N"), eventForDocument.Detail);
+    }
+
+    [Fact]
+    public async Task Answer_does_not_return_another_tenants_passages_and_audits_insufficient_evidence()
+    {
+        var tenantA = await CreateTenantAsync();
+        var tenantB = await CreateTenantAsync();
+        var documentId = await UploadCsvAsync(tenantA.Admin, "private.csv", "alpha ultraviolet,confidential,forecast");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+
+        _fixture.AnswerProvider.Reset();
+        var response = await tenantB.Analyst.PostAsJsonAsync("/api/answers", new { question = "ultraviolet confidential forecast" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var answer = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(answer.GetProperty("insufficientEvidence").GetBoolean());
+        Assert.Empty(answer.GetProperty("citations").EnumerateArray());
+        Assert.DoesNotContain("ultraviolet", answer.GetProperty("answer").GetString(), StringComparison.OrdinalIgnoreCase);
+        var noEvidenceAudit = Assert.Single(await AnswerAuditEventsAsync(tenantB.Id));
+        Assert.Null(noEvidenceAudit.DocumentId);
+        Assert.Null(noEvidenceAudit.Detail);
+        Assert.Equal(0, _fixture.AnswerProvider.Calls);
+
+        var tenantBDocumentId = await UploadCsvAsync(tenantB.Admin, "tenant-b.csv", "beta ultraviolet,confidential,forecast");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+
+        var tenantBResponse = await tenantB.Analyst.PostAsJsonAsync("/api/answers", new { question = "ultraviolet confidential forecast" });
+        Assert.Equal(HttpStatusCode.OK, tenantBResponse.StatusCode);
+        Assert.Equal(1, _fixture.AnswerProvider.Calls);
+        Assert.Contains("beta", Assert.Single(_fixture.AnswerProvider.LastRequest!.Passages).Source.Snippet, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("alpha", _fixture.AnswerProvider.LastRequest.DelimitedContext, StringComparison.OrdinalIgnoreCase);
+        var tenantBAnswer = await tenantBResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(tenantBDocumentId, Assert.Single(tenantBAnswer.GetProperty("citations").EnumerateArray()).GetProperty("documentId").GetGuid());
+        Assert.Contains(await AnswerAuditEventsAsync(tenantB.Id), auditEvent =>
+            auditEvent.Detail == tenantBDocumentId.ToString("N"));
+
+        _fixture.AnswerProvider.Reset();
+        var authorized = await tenantA.Analyst.PostAsJsonAsync("/api/answers", new { question = "ultraviolet confidential forecast" });
+        Assert.Equal(HttpStatusCode.OK, authorized.StatusCode);
+        Assert.Equal(1, _fixture.AnswerProvider.Calls);
+        Assert.Contains("alpha", Assert.Single(_fixture.AnswerProvider.LastRequest!.Passages).Source.Snippet, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("beta", _fixture.AnswerProvider.LastRequest.DelimitedContext, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(await EmbeddingsAsync([documentId]));
+    }
+
+    [Fact]
+    public async Task Answer_rejects_auditors_and_oversized_questions()
+    {
+        var tenant = await CreateTenantAsync();
+
+        var forbidden = await tenant.Auditor.PostAsJsonAsync("/api/answers", new { question = "report" });
+        var oversized = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = new string('q', 1001) });
+
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, oversized.StatusCode);
+    }
+
+    [Fact]
+    public async Task Provider_failure_returns_a_safe_error_and_audits_without_content()
+    {
+        var tenant = await CreateTenantAsync();
+        await UploadCsvAsync(tenant.Admin, "sensitive.csv", "sensitive-revenue-text,forecast,quarter");
+        await DrainProcessingAsync();
+        await DrainIndexingAsync();
+        _fixture.AnswerProvider.Reset();
+        _fixture.AnswerProvider.FailWithSensitiveTimeout = true;
+
+        var response = await tenant.Analyst.PostAsJsonAsync("/api/answers", new { question = "sensitive-revenue-text forecast" });
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.DoesNotContain("sensitive-revenue-text", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("private passage", body, StringComparison.OrdinalIgnoreCase);
+        var audit = Assert.Single(await AnswerAuditEventsAsync(tenant.Id));
+        Assert.Null(audit.DocumentId);
+        Assert.Null(audit.Detail);
+    }
+
+    [Fact]
     public async Task Search_over_ten_thousand_passages_completes_under_two_seconds()
     {
         var tenant = await CreateTenantAsync();
@@ -452,6 +587,8 @@ public class SearchApiTests : IClassFixture<SearchApiTests.Fixture>
         db.AuditEvents.Where(e => e.DocumentId == documentId).ToListAsync());
     private Task<List<AuditEvent>> SearchAuditEventsAsync(Guid tenantId) => WithDbAsync(db =>
         db.AuditEvents.Where(e => e.TenantId == tenantId && e.Action == "search.query").ToListAsync());
+    private Task<List<AuditEvent>> AnswerAuditEventsAsync(Guid tenantId) => WithDbAsync(db =>
+        db.AuditEvents.Where(e => e.TenantId == tenantId && e.Action == "answer.question").ToListAsync());
 
     private async Task<T> WithDbAsync<T>(Func<AppDbContext, Task<T>> action)
     {

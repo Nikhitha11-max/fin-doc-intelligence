@@ -72,7 +72,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.Property(x => x.Action).HasMaxLength(100);
             e.Property(x => x.TargetUserId).HasMaxLength(450);
-            e.Property(x => x.Detail).HasMaxLength(100);
+            e.Property(x => x.Detail).HasMaxLength(300);
             e.HasIndex(x => new { x.TenantId, x.OccurredAt });
         });
     }

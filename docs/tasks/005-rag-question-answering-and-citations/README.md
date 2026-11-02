@@ -10,7 +10,7 @@ Answer user questions using only relevant, permission-filtered document passages
 
 ## Scope for this task
 
-- Confirm the approved AI provider, model, data-handling terms, and answer limits.
+- Use only the deterministic local fake provider until a real provider's retention, region, and training terms are approved. Do not send content externally or add credentials.
 - Retrieve authorized passages before constructing a prompt or sending content externally.
 - Treat document text as untrusted input and keep authorization decisions outside the model.
 - Return verifiable source citations and an insufficient-evidence response.
@@ -20,11 +20,17 @@ Do not add persistent conversation history; that is Task 006.
 
 ## Work sequence
 
-1. Review provider privacy, retention, region, and training settings.
+1. Record the fake-only decision; defer any external provider until privacy terms are approved.
 2. Specify prompt boundaries, citation shape, response validation, and no-evidence behavior.
 3. Implement orchestration over the authorized retrieval from Task 004.
 4. Ensure logs and errors do not expose full prompts or sensitive passages.
 5. Test grounded answers, fabricated/invalid citations, insufficient evidence, and cross-tenant requests.
+
+## Current provider and limits
+
+The registered provider is a deterministic extractive fake. It selects a source sentence using exact word overlap; it is not a language model and makes no network calls. Defaults cap questions at 1000 characters, retrieved passages at 8, answers at 1000 characters, and provider execution at 30 seconds. The relevance threshold defaults to `0.1`; questions below it return an insufficient-evidence response without calling the answer provider.
+
+One `answer.question` audit event per request stores tenant, actor, time, and cited document IDs only (comma-separated 32-character GUIDs, up to 8). Questions, prompts, passages, and answer text are not persisted in audit events or logged.
 
 ## Completion checklist
 

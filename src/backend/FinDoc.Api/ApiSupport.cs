@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FinDoc.Application.Abstractions;
+using FinDoc.Application.Answers;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,6 +26,7 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
         var (status, detail) = exception switch
         {
             ForbiddenException => (StatusCodes.Status403Forbidden, "Access denied."),
+            AnswerProviderException => (StatusCodes.Status503ServiceUnavailable, "The answer provider is temporarily unavailable."),
             NotFoundException e => (StatusCodes.Status404NotFound, e.Message),
             ValidationFailedException e => (StatusCodes.Status400BadRequest, e.Message),
             ConflictException e => (StatusCodes.Status409Conflict, e.Message),

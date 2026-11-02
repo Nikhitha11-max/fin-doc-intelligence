@@ -52,7 +52,7 @@ public sealed class SearchStore(AppDbContext db) : ISearchStore
         {
             TenantId = tenantId,
             ActorUserId = actorUserId,
-            Action = "search.query",
+            Action = AuditActions.SearchQuery,
         });
         await db.SaveChangesAsync(ct);
     }

@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<ConversationMessage> ConversationMessages => Set<ConversationMessage>();
     public DbSet<ConversationCitation> ConversationCitations => Set<ConversationCitation>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<WorkerHeartbeat> WorkerHeartbeats => Set<WorkerHeartbeat>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -100,6 +101,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(x => x.TargetUserId).HasMaxLength(450);
             e.Property(x => x.Detail).HasMaxLength(300);
             e.HasIndex(x => new { x.TenantId, x.OccurredAt });
+            e.HasIndex(x => x.OccurredAt);
+        });
+
+        builder.Entity<WorkerHeartbeat>(e =>
+        {
+            e.HasKey(x => x.Name);
+            e.Property(x => x.Name).HasMaxLength(100);
         });
     }
 }

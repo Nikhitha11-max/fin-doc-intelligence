@@ -42,7 +42,7 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
 
         await files.SaveAsync(document.StorageKey, content, ct);
         store.Add(document);
-        Audit(caller, "document.upload", document.Id);
+        Audit(caller, AuditActions.DocumentUpload, document.Id);
         await store.SaveChangesAsync(ct);
         return ToDto(document);
     }
@@ -67,7 +67,7 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
         var caller = await AuthorizeAsync(Readers, ct);
         var document = await FindAsync(caller, id, ct);
         var stream = await files.OpenReadAsync(document.StorageKey, ct);
-        Audit(caller, "document.download", document.Id);
+        Audit(caller, AuditActions.DocumentDownload, document.Id);
         await store.SaveChangesAsync(ct);
         return new DownloadResult(stream, document.OriginalFileName);
     }
@@ -81,7 +81,7 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
 
         document.Title = title.Trim();
         document.UpdatedAt = DateTimeOffset.UtcNow;
-        Audit(caller, "document.update", document.Id);
+        Audit(caller, AuditActions.DocumentUpdate, document.Id);
         await store.SaveChangesAsync(ct);
         return ToDto(document);
     }
@@ -91,7 +91,7 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
         var caller = await AuthorizeAsync(Writers, ct);
         var document = await FindAsync(caller, id, ct);
         document.DeletedAt = DateTimeOffset.UtcNow;
-        Audit(caller, "document.delete", document.Id);
+        Audit(caller, AuditActions.DocumentDelete, document.Id);
         await store.SaveChangesAsync(ct);
     }
 
@@ -102,7 +102,7 @@ public class DocumentService(IDocumentStore store, IFileStorage files, ICurrentU
         if (!await store.TryRetryAsync(caller.TenantId, id, ct))
             throw new ConflictException("Only failed documents can be retried.");
 
-        Audit(caller, "document.retry", document.Id);
+        Audit(caller, AuditActions.DocumentRetry, document.Id);
         await store.SaveChangesAsync(ct);
         var refreshed = await FindAsync(caller, id, ct);
         return ToDto(refreshed);

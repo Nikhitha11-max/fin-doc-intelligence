@@ -21,7 +21,7 @@ An Auditor or Tenant Administrator views and filters their own tenant's audit ev
 All security-relevant actions across features 001–006 produce audit events with no content.
 
 **Acceptance Scenarios**:
-1. **Given** any covered action (upload, download, delete, processing, retry, membership change, search, question, conversation delete), **Then** one audit event exists.
+1. **Given** any covered action (upload, download, delete, processing, retry, membership change, search, question, conversation create/append; user deletion of conversations was not approved in 006), **Then** one audit event exists.
 2. **Given** an audit event, **Then** it contains no document text, prompts, passwords or tokens.
 
 ### User Story 3 - Operators see system health (Priority: P2)

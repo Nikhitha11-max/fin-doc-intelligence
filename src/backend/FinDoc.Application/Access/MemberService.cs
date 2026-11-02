@@ -60,7 +60,7 @@ public class MemberService(IAccessStore store, IUserDirectory users, ICurrentUse
                 await EnsureAnotherAdminAsync(current.TenantId, ct);
 
             target.Role = newRole;
-            Audit(current.TenantId, current.UserId, "member.role_change", userId, newRole.ToString());
+            Audit(current.TenantId, current.UserId, AuditActions.MemberRoleChange, userId, newRole.ToString());
             await store.SaveChangesAsync(ct);
             return new MemberInfo(target.UserId, string.Empty, target.Role, target.CreatedAt);
         }, ct);
@@ -80,7 +80,7 @@ public class MemberService(IAccessStore store, IUserDirectory users, ICurrentUse
                 await EnsureAnotherAdminAsync(current.TenantId, ct);
 
             store.RemoveMembership(target);
-            Audit(current.TenantId, current.UserId, "member.remove", userId, null);
+            Audit(current.TenantId, current.UserId, AuditActions.MemberRemove, userId, null);
             await store.SaveChangesAsync(ct);
             return true;
         }, ct);
@@ -107,10 +107,10 @@ public class MemberService(IAccessStore store, IUserDirectory users, ICurrentUse
             if (newTenant is not null)
             {
                 store.AddTenant(newTenant);
-                store.AddAudit(new AuditEvent { TenantId = tenantId, ActorUserId = actorUserId, Action = "tenant.create" });
+                store.AddAudit(new AuditEvent { TenantId = tenantId, ActorUserId = actorUserId, Action = AuditActions.TenantCreate });
             }
             store.AddMembership(membership);
-            Audit(tenantId, actorUserId, "member.add", userId, role.ToString());
+            Audit(tenantId, actorUserId, AuditActions.MemberAdd, userId, role.ToString());
             await store.SaveChangesAsync(ct);
             return new MemberInfo(userId, email, role, membership.CreatedAt);
         }

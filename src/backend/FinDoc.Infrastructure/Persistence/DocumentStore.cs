@@ -57,7 +57,7 @@ public class DocumentStore(AppDbContext db) : IDocumentStore
         {
             TenantId = tenantId,
             ActorUserId = actorUserId,
-            Action = "document.reindex",
+            Action = AuditActions.DocumentReindex,
             DocumentId = id,
         });
         await db.SaveChangesAsync(ct);

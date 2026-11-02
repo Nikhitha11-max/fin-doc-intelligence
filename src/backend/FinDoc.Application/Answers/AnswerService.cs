@@ -1,5 +1,6 @@
 using FinDoc.Application.Abstractions;
 using FinDoc.Application.Conversations;
+using FinDoc.Application.Observability;
 using FinDoc.Application.Search;
 using FinDoc.Domain.Entities;
 
@@ -51,16 +52,19 @@ public sealed class AnswerService(
             }
             catch (AnswerProviderException)
             {
+                Telemetry.ProviderFailures.Add(1);
                 await audit.RecordAsync(caller.TenantId, caller.UserId, [], ct);
                 throw;
             }
             catch (TimeoutException)
             {
+                Telemetry.ProviderFailures.Add(1);
                 await audit.RecordAsync(caller.TenantId, caller.UserId, [], ct);
                 throw new AnswerProviderException();
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
+                Telemetry.ProviderFailures.Add(1);
                 await audit.RecordAsync(caller.TenantId, caller.UserId, [], ct);
                 throw new AnswerProviderException();
             }

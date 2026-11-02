@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore.Storage;
+using FinDoc.Application.Observability;
 using FinDoc.Application.Processing;
 using FinDoc.Domain.Entities;
 using FinDoc.Infrastructure.Persistence;
@@ -39,7 +40,7 @@ public class ProcessingStore(AppDbContext db) : IProcessingStore
         if (claim is null)
             return null;
 
-        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.Id, "document.processing_started", null));
+        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.Id, AuditActions.DocumentProcessingStarted, null));
         await db.SaveChangesAsync(ct);
         return claim;
     }
@@ -61,7 +62,7 @@ public class ProcessingStore(AppDbContext db) : IProcessingStore
 
         await db.Chunks.IgnoreQueryFilters().Where(c => c.DocumentId == claim.Id).ExecuteDeleteAsync(ct);
         db.Chunks.AddRange(chunks);
-        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.Id, "document.processing_completed", null));
+        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.Id, AuditActions.DocumentProcessingCompleted, null));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         db.ChangeTracker.Clear();
@@ -83,10 +84,11 @@ public class ProcessingStore(AppDbContext db) : IProcessingStore
             return false;
 
         await db.Chunks.IgnoreQueryFilters().Where(c => c.DocumentId == claim.Id).ExecuteDeleteAsync(ct);
-        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.Id, "document.processing_failed", code));
+        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.Id, AuditActions.DocumentProcessingFailed, code));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         db.ChangeTracker.Clear();
+        Telemetry.ProcessingFailures.Add(1);
         return true;
     }
 
@@ -106,7 +108,10 @@ public class ProcessingStore(AppDbContext db) : IProcessingStore
             return;
 
         foreach (var (id, tenantId) in failed)
-            db.AuditEvents.Add(SystemAudit(tenantId, id, "document.processing_failed", FailureCodes.Internal));
+        {
+            db.AuditEvents.Add(SystemAudit(tenantId, id, AuditActions.DocumentProcessingFailed, FailureCodes.Internal));
+            Telemetry.ProcessingFailures.Add(1);
+        }
         await db.SaveChangesAsync(ct);
     }
 

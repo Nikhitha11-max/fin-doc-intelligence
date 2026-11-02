@@ -1,10 +1,21 @@
 using FinDoc.Api;
+using FinDoc.Api.Logging;
+using FinDoc.Api.Middleware;
 using FinDoc.Application.Abstractions;
 using FinDoc.Infrastructure;
+using FinDoc.Infrastructure.Observability;
 using FinDoc.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging.Console;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(o => o.FormatterName = RedactingJsonConsoleFormatter.FormatterName);
+builder.Services.AddSingleton<ConsoleFormatter, RedactingJsonConsoleFormatter>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
@@ -15,6 +26,9 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"])
+    .AddCheck<WorkerHealthCheck>("workers", tags: ["ready"]);
 
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityApiEndpoints<IdentityUser>(o => o.User.RequireUniqueEmail = true)
@@ -23,7 +37,9 @@ builder.Services.AddIdentityApiEndpoints<IdentityUser>(o => o.User.RequireUnique
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
+app.UseMiddleware<RequestMetricsMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -45,6 +61,24 @@ app.MapGroup("/api/auth").MapIdentityApi<IdentityUser>()
             ? Results.NotFound()
             : await next(context));
 app.MapControllers();
+
+// Status only: no exception text, connection details or per-tenant data is exposed.
+Task WriteHealthAsync(HttpContext context, HealthReport report)
+{
+    context.Response.ContentType = "application/json";
+    return context.Response.WriteAsync(JsonSerializer.Serialize(new
+    {
+        status = report.Status.ToString(),
+        checks = report.Entries.ToDictionary(entry => entry.Key, entry => entry.Value.Status.ToString()),
+    }));
+}
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false, ResponseWriter = WriteHealthAsync });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = WriteHealthAsync,
+});
 
 app.Run();
 

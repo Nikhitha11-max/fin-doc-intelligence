@@ -188,7 +188,7 @@ public sealed class ConversationStore(AppDbContext db) : IConversationStore
         {
             TenantId = tenantId,
             ActorUserId = ownerUserId,
-            Action = isNew ? "conversation.create" : "conversation.append",
+            Action = isNew ? AuditActions.ConversationCreate : AuditActions.ConversationAppend,
         });
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);

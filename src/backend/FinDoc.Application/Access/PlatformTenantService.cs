@@ -29,7 +29,7 @@ public class PlatformTenantService(IAccessStore store, MemberService members, IC
         var actor = RequirePlatformAdmin();
         var tenant = await FindAsync(id, ct);
         tenant.Name = CleanName(name);
-        Audit(tenant.Id, actor, "tenant.rename");
+        Audit(tenant.Id, actor, AuditActions.TenantRename);
         await store.SaveChangesAsync(ct);
         return ToSummary(tenant);
     }
@@ -42,7 +42,7 @@ public class PlatformTenantService(IAccessStore store, MemberService members, IC
         {
             tenant.IsActive = active;
             tenant.DeactivatedAt = active ? null : DateTimeOffset.UtcNow;
-            Audit(tenant.Id, actor, active ? "tenant.reactivate" : "tenant.deactivate");
+            Audit(tenant.Id, actor, active ? AuditActions.TenantReactivate : AuditActions.TenantDeactivate);
             await store.SaveChangesAsync(ct);
         }
         return ToSummary(tenant);

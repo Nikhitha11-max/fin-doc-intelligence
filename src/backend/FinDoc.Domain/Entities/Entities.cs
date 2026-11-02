@@ -129,3 +129,9 @@ public class AuditEvent
     public string? Detail { get; set; }
     public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
 }
+
+public class WorkerHeartbeat
+{
+    public string Name { get; set; } = string.Empty;
+    public DateTimeOffset LastBeatAt { get; set; } = DateTimeOffset.UtcNow;
+}

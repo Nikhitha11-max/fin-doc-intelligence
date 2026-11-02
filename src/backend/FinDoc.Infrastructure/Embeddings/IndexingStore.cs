@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using FinDoc.Application.Observability;
 using FinDoc.Application.Search;
 using FinDoc.Domain.Entities;
 using FinDoc.Infrastructure.Persistence;
@@ -43,7 +44,7 @@ public sealed class IndexingStore(AppDbContext db) : IIndexingStore
             return null;
         }
 
-        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.DocumentId, "document.indexing_started", null));
+        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.DocumentId, AuditActions.DocumentIndexingStarted, null));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         db.ChangeTracker.Clear();
@@ -96,7 +97,7 @@ public sealed class IndexingStore(AppDbContext db) : IIndexingStore
             Vector = new Vector(e.Vector),
             Model = e.Model,
         }));
-        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.DocumentId, "document.indexing_completed", null));
+        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.DocumentId, AuditActions.DocumentIndexingCompleted, null));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         db.ChangeTracker.Clear();
@@ -125,10 +126,11 @@ public sealed class IndexingStore(AppDbContext db) : IIndexingStore
         await db.ChunkEmbeddings.IgnoreQueryFilters()
             .Where(e => e.TenantId == claim.TenantId && e.DocumentId == claim.DocumentId)
             .ExecuteDeleteAsync(ct);
-        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.DocumentId, "document.indexing_failed", safeCode));
+        db.AuditEvents.Add(SystemAudit(claim.TenantId, claim.DocumentId, AuditActions.DocumentIndexingFailed, safeCode));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         db.ChangeTracker.Clear();
+        Telemetry.IndexingFailures.Add(1);
         return true;
     }
 
@@ -158,7 +160,8 @@ public sealed class IndexingStore(AppDbContext db) : IIndexingStore
             await db.ChunkEmbeddings.IgnoreQueryFilters()
                 .Where(e => e.TenantId == item.TenantId && e.DocumentId == item.DocumentId)
                 .ExecuteDeleteAsync(ct);
-            db.AuditEvents.Add(SystemAudit(item.TenantId, item.DocumentId, "document.indexing_failed", IndexFailureCodes.Internal));
+            db.AuditEvents.Add(SystemAudit(item.TenantId, item.DocumentId, AuditActions.DocumentIndexingFailed, IndexFailureCodes.Internal));
+            Telemetry.IndexingFailures.Add(1);
         }
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

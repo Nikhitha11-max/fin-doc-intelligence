@@ -58,6 +58,8 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OccurredAt");
+
                     b.HasIndex("TenantId", "OccurredAt");
 
                     b.ToTable("AuditEvents");
@@ -367,6 +369,20 @@ namespace FinDoc.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Memberships");
+                });
+
+            modelBuilder.Entity("FinDoc.Domain.Entities.WorkerHeartbeat", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("LastBeatAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("WorkerHeartbeats");
                 });
 
             modelBuilder.Entity("FinDoc.Infrastructure.Persistence.ChunkEmbedding", b =>

@@ -8,6 +8,9 @@
       <a routerLink="/answers">Ask</a>
       <a routerLink="/history">History</a>
     }
+    @if (me.role === 'TenantAdmin' || me.role === 'Auditor') {
+      <a routerLink="/audit">Audit</a>
+    }
     @if (me.role === 'TenantAdmin') {
       <a routerLink="/team">Team</a>
     }

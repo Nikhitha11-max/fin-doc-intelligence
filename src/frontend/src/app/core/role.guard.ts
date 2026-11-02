@@ -9,6 +9,13 @@ export const tenantAdminGuard: CanActivateFn = () => {
   return inject(AccessService).loadMe().pipe(map((me) => (me.role === 'TenantAdmin' ? true : router.createUrlTree(['/documents']))));
 };
 
+export const auditViewerGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  return inject(AccessService).loadMe().pipe(
+    map((me) => (me.role === 'TenantAdmin' || me.role === 'Auditor' ? true : router.createUrlTree(['/documents']))),
+  );
+};
+
 export const platformAdminGuard: CanActivateFn = () => {
   const router = inject(Router);
   return inject(AccessService).loadMe().pipe(map((me) => (me.isPlatformAdmin ? true : router.createUrlTree(['/documents']))));

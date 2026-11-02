@@ -17,7 +17,7 @@ public sealed class AnswerAuditStore(AppDbContext db) : IAnswerAuditStore
         {
             TenantId = tenantId,
             ActorUserId = actorUserId,
-            Action = "answer.question",
+            Action = AuditActions.AnswerQuestion,
             Detail = documentIds.Length == 0 ? null : string.Join(',', documentIds),
         });
         await db.SaveChangesAsync(ct);

@@ -37,3 +37,14 @@ Do not expose audit records or operational diagnostics to users without the appr
 ## Copilot task prompt
 
 > Read the root `README.md`, `docs/README.md`, and this task guide. Review the existing baseline audit events before implementing anything. Add only approved audit and monitoring scope, preserve access controls, and test redaction so secrets and financial document content do not leak into logs.
+
+## Implemented decisions
+
+- **Retention:** audit events are kept 365 days (`Audit:RetentionDays`); the `audit-cleanup` worker purges older rows every `Audit:CleanupInterval`. This is the only deletion path; there is no write or delete API.
+- **Viewers:** Auditor and Tenant Administrator, scoped to their own tenant, via `GET /api/audit?from&to&actor&action&page&pageSize` (page size capped by `Audit:MaxPageSize`). The Angular page is at `/audit`.
+- **Action catalog:** `AuditActions` in `FinDoc.Domain`. Conversation coverage is `conversation.create` and `conversation.append`.
+- **Correlation:** `X-Correlation-Id` is accepted if it matches `^[A-Za-z0-9._-]{1,64}$`, otherwise replaced; it is echoed in the response and included in log scopes (API and workers).
+- **Logging:** JSON console logs with redaction of bearer tokens, JWTs and `Monitoring:SensitiveKeys`; exceptions are logged by type name only.
+- **Health:** `/health/live` (process) and `/health/ready` (database and worker heartbeats). A down database is Unhealthy (503); a stale worker heartbeat is Degraded (200). Responses contain status names only.
+- **Metrics:** .NET meter `FinDoc` (requests, errors, processing/indexing/provider failures, `findoc.queue.depth`). The queue-depth gauge refreshes when diagnostics are fetched.
+- **Diagnostics:** `GET /api/platform/diagnostics`, Platform Administrator only; counts and failure codes, no content.

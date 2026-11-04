@@ -9,60 +9,62 @@ const PAGE_SIZE = 10;
   selector: 'app-platform',
   imports: [DatePipe],
   template: `
-    <h1>Organizations</h1>
-    <section class="add">
-      <input #name type="text" placeholder="Organization name" maxlength="200" aria-label="Organization name" />
-      <input #adminEmail type="email" placeholder="First administrator email" aria-label="Administrator email" />
-      <input #adminPassword type="password" placeholder="Temporary password" aria-label="Administrator password" autocomplete="new-password" />
-      <button type="button" (click)="create(name, adminEmail, adminPassword)">Create organization</button>
+    <header class="page-head">
+      <h1>Organizations</h1>
+      <p>Create organizations and manage their lifecycle.</p>
+    </header>
+    <section class="card mb-6" aria-label="Create an organization">
+      <h2 class="mb-3">Create an organization</h2>
+      <div class="grid gap-3 md:grid-cols-[1fr_1.2fr_1fr_auto]">
+        <input #name type="text" placeholder="Organization name" maxlength="200" aria-label="Organization name" />
+        <input #adminEmail type="email" placeholder="First administrator email" aria-label="Administrator email" />
+        <input #adminPassword type="password" placeholder="Temporary password" aria-label="Administrator password" autocomplete="new-password" />
+        <button type="button" (click)="create(name, adminEmail, adminPassword)">Create organization</button>
+      </div>
     </section>
 
     @if (message()) { <p class="message" role="status">{{ message() }}</p> }
     @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
 
     @if (loading()) {
-      <p>Loading…</p>
+      <p class="loading">Loading…</p>
     } @else {
-      <table>
-        <thead><tr><th>Name</th><th>Status</th><th>Created</th><th></th></tr></thead>
-        <tbody>
-          @for (t of items(); track t.id) {
-            <tr>
-              <td>
-                @if (editingId() === t.id) {
-                  <input #rename [value]="t.name" maxlength="200" aria-label="New name" (keydown.enter)="saveName(t, rename.value)" />
-                  <button type="button" (click)="saveName(t, rename.value)">Save</button>
-                  <button type="button" (click)="editingId.set(null)">Cancel</button>
-                } @else {
-                  {{ t.name }}
-                }
-              </td>
-              <td>{{ t.isActive ? 'Active' : 'Deactivated' }}</td>
-              <td>{{ t.createdAt | date: 'mediumDate' }}</td>
-              <td class="actions">
-                <button type="button" (click)="editingId.set(t.id)">Rename</button>
-                <button type="button" (click)="toggle(t)">{{ t.isActive ? 'Deactivate' : 'Reactivate' }}</button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Status</th><th>Created</th><th></th></tr></thead>
+          <tbody>
+            @for (t of items(); track t.id) {
+              <tr>
+                <td class="font-medium text-slate-900">
+                  @if (editingId() === t.id) {
+                    <div class="flex items-center gap-1.5">
+                      <input #rename [value]="t.name" maxlength="200" aria-label="New name" (keydown.enter)="saveName(t, rename.value)" />
+                      <button type="button" class="btn-sm" (click)="saveName(t, rename.value)">Save</button>
+                      <button type="button" class="btn-secondary btn-sm" (click)="editingId.set(null)">Cancel</button>
+                    </div>
+                  } @else {
+                    {{ t.name }}
+                  }
+                </td>
+                <td><span class="badge" [class.completed]="t.isActive" [class.failed]="!t.isActive">{{ t.isActive ? 'Active' : 'Deactivated' }}</span></td>
+                <td class="text-slate-500">{{ t.createdAt | date: 'mediumDate' }}</td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="btn-secondary btn-sm" (click)="editingId.set(t.id)">Rename</button>
+                    <button type="button" [class]="t.isActive ? 'btn-danger btn-sm' : 'btn-secondary btn-sm'" (click)="toggle(t)">{{ t.isActive ? 'Deactivate' : 'Reactivate' }}</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
       <nav class="pager" aria-label="Pagination">
-        <button type="button" [disabled]="page() <= 1" (click)="goTo(page() - 1)">Previous</button>
+        <button type="button" class="btn-secondary btn-sm" [disabled]="page() <= 1" (click)="goTo(page() - 1)">Previous</button>
         <span>Page {{ page() }} of {{ totalPages() }} ({{ total() }} organizations)</span>
-        <button type="button" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)">Next</button>
+        <button type="button" class="btn-secondary btn-sm" [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)">Next</button>
       </nav>
     }
-  `,
-  styles: `
-    :host { display: block; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
-    .add { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; }
-    .actions { white-space: nowrap; }
-    .pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
-    .message { color: #1b5e20; }
-    .error { color: #b00020; }
   `,
 })
 export class PlatformComponent implements OnInit {

@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +33,23 @@ builder.Services.AddHealthChecks()
     .AddCheck<WorkerHealthCheck>("workers", tags: ["ready"]);
 
 builder.Services.AddAuthorization();
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    var loginLimit = builder.Configuration.GetValue("RateLimiting:LoginPermitsPerMinute", 10);
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        context.Request.Path.StartsWithSegments("/api/auth")
+            ? RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = loginLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })
+            : RateLimitPartition.GetNoLimiter("none"));
+});
+builder.Services.Configure<IdentityOptions>(o =>
+{
+    o.Lockout.MaxFailedAccessAttempts = 5;
+    o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    o.Lockout.AllowedForNewUsers = true;
+});
 builder.Services.AddIdentityApiEndpoints<IdentityUser>(o => o.User.RequireUniqueEmail = true)
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
@@ -38,6 +57,18 @@ builder.Services.AddIdentityApiEndpoints<IdentityUser>(o => o.User.RequireUnique
 var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    if (!context.Request.Path.StartsWithSegments("/swagger"))
+        headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
+    await next();
+});
+if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseExceptionHandler();
 app.UseMiddleware<RequestMetricsMiddleware>();
 
@@ -51,6 +82,7 @@ if (app.Environment.IsDevelopment())
 await PlatformBootstrap.RunAsync(app.Services, app.Configuration["Bootstrap:PlatformAdminEmail"], app.Configuration["Bootstrap:PlatformAdminPassword"]);
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

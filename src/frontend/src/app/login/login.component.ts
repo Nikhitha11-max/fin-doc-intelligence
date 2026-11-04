@@ -9,23 +9,21 @@ import { AuthService } from '../core/auth.service';
   selector: 'app-login',
   imports: [ReactiveFormsModule],
   template: `
-    <main class="card">
-      <h1>Sign in to FinDoc AI</h1>
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <label>Email <input type="email" formControlName="email" autocomplete="username" /></label>
-        <label>Password <input type="password" formControlName="password" autocomplete="current-password" /></label>
+    <main class="mx-auto mt-12 max-w-md">
+      <div class="mb-8 flex flex-col items-center text-center">
+        <span class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-2xl font-bold text-white shadow-lg shadow-indigo-200">F</span>
+        <h1>Sign in to FinDoc AI</h1>
+        <p class="mt-1 text-slate-500">Secure financial-document intelligence.</p>
+      </div>
+      <form class="card space-y-5 !p-8 shadow-xl shadow-slate-200" [formGroup]="form" (ngSubmit)="submit()">
+        <label>Email <input type="email" class="mt-1.5" formControlName="email" autocomplete="username" placeholder="you@company.com" /></label>
+        <label>Password <input type="password" class="mt-1.5" formControlName="password" autocomplete="current-password" placeholder="••••••••" /></label>
         @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
+          <p class="error !mb-0" role="alert">{{ error() }}</p>
         }
-        <button type="submit" [disabled]="form.invalid || busy()">Sign in</button>
+        <button type="submit" class="w-full !py-2.5" [disabled]="form.invalid || busy()">{{ busy() ? 'Signing in…' : 'Sign in' }}</button>
       </form>
     </main>
-  `,
-  styles: `
-    .card { max-width: 22rem; margin: 4rem auto; padding: 1.5rem; border: 1px solid #ccc; border-radius: 8px; }
-    label { display: block; margin-bottom: 1rem; }
-    input { display: block; width: 100%; padding: 0.4rem; box-sizing: border-box; }
-    .error { color: #b00020; }
   `,
 })
 export class LoginComponent {

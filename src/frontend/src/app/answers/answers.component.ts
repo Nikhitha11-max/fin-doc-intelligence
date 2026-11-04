@@ -7,40 +7,44 @@ import { AnswerCitation, AnswerResponse, AnswersService, ConversationMessage } f
   selector: 'app-answers',
   template: `
     <main>
-      <h1>Ask your documents</h1>
-      <p class="note">Local demo answers use exact word overlap and quoted source passages only. No external model is used.</p>
-      <form (submit)="$event.preventDefault(); ask(question.value)">
+      <header class="page-head">
+        <h1>Ask your documents</h1>
+        <p>Local demo answers use exact word overlap and quoted source passages only. No external model is used.</p>
+      </header>
+      <form class="card mb-6" (submit)="$event.preventDefault(); ask(question.value)">
         <label for="question">Question</label>
-        <textarea #question id="question" maxlength="1000" required rows="4" placeholder="Ask a question about your documents"></textarea>
-        <button type="submit" [disabled]="loading()">Ask</button>
+        <textarea #question id="question" class="mt-1.5" maxlength="1000" required rows="4" placeholder="Ask a question about your documents"></textarea>
+        <div class="mt-3 flex justify-end">
+          <button type="submit" [disabled]="loading()">Ask</button>
+        </div>
       </form>
 
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p>Preparing an answer…</p> }
+      @if (loading()) { <p class="loading">Preparing an answer…</p> }
       @if (response(); as result) {
-        <section aria-live="polite">
+        <section class="card mb-6 space-y-3 border-l-4 !border-indigo-500" aria-live="polite">
           <h2>Answer</h2>
-          <p class="answer" [class.insufficient]="result.insufficientEvidence">{{ result.answer }}</p>
+          <p class="whitespace-pre-wrap leading-relaxed" [class.text-slate-500]="result.insufficientEvidence" [class.italic]="result.insufficientEvidence">{{ result.answer }}</p>
           @if (result.citations.length > 0) {
-            <h2>Sources</h2>
-            <ol>
+            <h2 class="pt-2">Sources</h2>
+            <ol class="list-decimal space-y-1 pl-5">
               @for (citation of result.citations; track citation.chunkId) {
-                <li><strong>{{ citation.documentTitle }}</strong> · {{ source(citation) }}</li>
+                <li><strong class="text-slate-900">{{ citation.documentTitle }}</strong> · <span class="text-slate-500">{{ source(citation) }}</span></li>
               }
             </ol>
           }
         </section>
       }
       @if (messages().length > 0) {
-        <section class="history" aria-label="Conversation history">
+        <section class="space-y-3" aria-label="Conversation history">
           @for (message of messages(); track message.id) {
-            <article>
-              <h2>{{ message.role === 'user' ? 'You' : 'Answer' }}</h2>
-              <p class="answer">{{ message.text }}</p>
+            <article class="card" [class.!bg-indigo-50]="message.role === 'user'">
+              <h2 class="mb-2 text-xs font-semibold uppercase tracking-wide" [class.text-indigo-700]="message.role === 'user'" [class.text-slate-500]="message.role !== 'user'">{{ message.role === 'user' ? 'You' : 'Answer' }}</h2>
+              <p class="whitespace-pre-wrap leading-relaxed">{{ message.text }}</p>
               @if (message.citations.length > 0) {
-                <ul>
+                <ul class="mt-3 space-y-1 border-t border-slate-200 pt-3 text-xs">
                   @for (citation of message.citations; track citation.chunkId) {
-                    <li><strong>{{ citation.documentTitle }}</strong> · {{ source(citation) }}</li>
+                    <li><strong class="text-slate-900">{{ citation.documentTitle }}</strong> · <span class="text-slate-500">{{ source(citation) }}</span></li>
                   }
                 </ul>
               }
@@ -49,18 +53,6 @@ import { AnswerCitation, AnswerResponse, AnswersService, ConversationMessage } f
         </section>
       }
     </main>
-  `,
-  styles: `
-    :host { display: block; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
-    main { padding-bottom: 2rem; }
-    .note { color: #555; }
-    form { margin: 1.5rem 0; }
-    label, textarea { display: block; width: 100%; }
-    textarea { box-sizing: border-box; margin: 0.4rem 0 0.8rem; padding: 0.6rem; }
-    .answer { white-space: pre-wrap; }
-    .history article { border-top: 1px solid #ddd; padding: 0.5rem 0; }
-    .insufficient, .note { color: #555; }
-    .error { color: #b00020; }
   `,
 })
 export class AnswersComponent implements OnInit {

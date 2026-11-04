@@ -11,7 +11,6 @@ const PAGE_SIZE = 10;
   selector: 'app-documents',
   imports: [DatePipe],
   templateUrl: './documents.component.html',
-  styleUrl: './documents.component.scss',
 })
 export class DocumentsComponent implements OnInit {
   private readonly api = inject(DocumentsService);

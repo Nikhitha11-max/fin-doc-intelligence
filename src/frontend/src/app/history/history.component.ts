@@ -9,39 +9,31 @@ import { AnswersService, ConversationListItem } from '../answers/answers.service
   imports: [DatePipe],
   template: `
     <main>
-      <h1>Conversation history</h1>
-      <p class="note">Conversations are private to you and retained under the configured history policy.</p>
+      <header class="page-head">
+        <h1>Conversation history</h1>
+        <p>Conversations are private to you and retained under the configured history policy.</p>
+      </header>
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p>Loading conversations…</p> }
-      @else if (items().length === 0) { <p>No conversations yet.</p> }
+      @if (loading()) { <p class="loading">Loading conversations…</p> }
+      @else if (items().length === 0) { <p class="empty">No conversations yet.</p> }
       @else {
-        <ol>
+        <ol class="card divide-y divide-slate-100 !p-0">
           @for (conversation of items(); track conversation.id) {
             <li>
-              <button type="button" (click)="open(conversation)">
-                <strong>{{ conversation.title }}</strong>
-                <span>{{ conversation.messageCount / 2 }} questions · {{ conversation.updatedAt | date: 'medium' }}</span>
+              <button type="button" class="!flex !w-full !justify-between !gap-4 !rounded-none !bg-transparent !px-5 !py-4 !text-left !font-normal !text-slate-700 !shadow-none hover:!bg-slate-50" (click)="open(conversation)">
+                <strong class="truncate text-slate-900">{{ conversation.title }}</strong>
+                <span class="shrink-0 text-xs text-slate-500">{{ conversation.messageCount / 2 }} questions · {{ conversation.updatedAt | date: 'medium' }}</span>
               </button>
             </li>
           }
         </ol>
         <nav class="pager" aria-label="Conversation pages">
-          <button type="button" [disabled]="page() <= 1" (click)="load(page() - 1)">Previous</button>
+          <button type="button" class="btn-secondary btn-sm" [disabled]="page() <= 1" (click)="load(page() - 1)">Previous</button>
           <span>Page {{ page() }} of {{ totalPages() }}</span>
-          <button type="button" [disabled]="page() >= totalPages()" (click)="load(page() + 1)">Next</button>
+          <button type="button" class="btn-secondary btn-sm" [disabled]="page() >= totalPages()" (click)="load(page() + 1)">Next</button>
         </nav>
       }
     </main>
-  `,
-  styles: `
-    :host { display: block; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
-    .note { color: #555; }
-    ol { padding: 0; list-style: none; }
-    li { border-bottom: 1px solid #ddd; }
-    li button { display: flex; width: 100%; justify-content: space-between; gap: 1rem; padding: 1rem; text-align: left; }
-    li span { color: #555; }
-    .pager { display: flex; justify-content: center; align-items: center; gap: 1rem; margin: 1rem; }
-    .error { color: #b00020; }
   `,
 })
 export class HistoryComponent implements OnInit {

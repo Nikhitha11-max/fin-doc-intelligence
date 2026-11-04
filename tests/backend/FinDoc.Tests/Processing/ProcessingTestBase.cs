@@ -43,6 +43,7 @@ public abstract class PgFixture(string suffix, bool workerEnabled) : IAsyncLifet
             b.UseSetting("Storage:RootPath", _storage);
             b.UseSetting("Bootstrap:PlatformAdminEmail", PlatformEmail);
             b.UseSetting("Bootstrap:PlatformAdminPassword", Pw);
+            b.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
             b.UseSetting("Processing:WorkerEnabled", workerEnabled.ToString());
             b.UseSetting("Processing:PollInterval", "00:00:00.100");
         });

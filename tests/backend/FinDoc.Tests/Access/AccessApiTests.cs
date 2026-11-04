@@ -42,6 +42,7 @@ public class AccessApiTests : IClassFixture<AccessApiTests.Fixture>
                 b.UseSetting("Storage:RootPath", _storage);
                 b.UseSetting("Bootstrap:PlatformAdminEmail", PlatformEmail);
                 b.UseSetting("Bootstrap:PlatformAdminPassword", Pw);
+                b.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
             });
             _ = Factory.Server;
         }

@@ -1,17 +1,20 @@
 import { Component, effect, inject } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AccessService } from './core/access.service';
 import { AuthService } from './core/auth.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  templateUrl: './app.component.html'
 })
 export class AppComponent {
   readonly auth = inject(AuthService);
   readonly access = inject(AccessService);
+
+  logout(): void {
+    this.auth.logout();
+  }
 
   constructor() {
     effect(() => {

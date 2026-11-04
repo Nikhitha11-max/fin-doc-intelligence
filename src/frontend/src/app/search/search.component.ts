@@ -6,50 +6,37 @@ import { SearchResult, SearchService } from './search.service';
   selector: 'app-search',
   template: `
     <main>
-      <h1>Search documents</h1>
-      <p class="note">Local demo search uses word overlap only. No model or external provider is used.</p>
-      <form (submit)="$event.preventDefault(); search(query.value)">
+      <header class="page-head">
+        <h1>Search documents</h1>
+        <p>Local demo search uses word overlap only. No model or external provider is used.</p>
+      </header>
+      <form class="card mb-6" (submit)="$event.preventDefault(); search(query.value)">
         <label for="query">Search query</label>
-        <div class="search-box">
+        <div class="mt-1.5 flex flex-col gap-2 sm:flex-row">
           <input #query id="query" type="search" maxlength="500" required placeholder="Search document passages" />
           <button type="submit" [disabled]="loading()">Search</button>
         </div>
       </form>
 
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p>Searching…</p> }
-      @else if (searched() && results().length === 0) { <p>No matching passages found.</p> }
+      @if (loading()) { <p class="loading">Searching…</p> }
+      @else if (searched() && results().length === 0) { <p class="empty">No matching passages found.</p> }
 
-      <ol class="results">
+      <ol class="space-y-3">
         @for (result of results(); track result.chunkId) {
           <li>
-            <article>
-              <header>
-                <strong>{{ result.documentTitle }}</strong>
-                <span>Passage {{ result.ordinal + 1 }} · Similarity {{ (result.score * 100).toFixed(1) }}%</span>
+            <article class="card transition hover:shadow-md">
+              <header class="flex flex-wrap items-center justify-between gap-2">
+                <strong class="text-base text-slate-900">{{ result.documentTitle }}</strong>
+                <span class="badge !bg-indigo-50 !text-indigo-700 !ring-indigo-200">Passage {{ result.ordinal + 1 }} · Similarity {{ (result.score * 100).toFixed(1) }}%</span>
               </header>
-              <p>{{ result.snippet }}</p>
-              <small>{{ source(result) }}</small>
+              <p class="mt-3 whitespace-pre-wrap leading-relaxed text-slate-700">{{ result.snippet }}</p>
+              <small class="mt-3 block text-xs font-medium text-slate-500">{{ source(result) }}</small>
             </article>
           </li>
         }
       </ol>
     </main>
-  `,
-  styles: `
-    :host { display: block; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
-    main { padding-bottom: 2rem; }
-    .note { color: #555; }
-    form { margin: 1.5rem 0; }
-    label { display: block; margin-bottom: 0.4rem; }
-    .search-box { display: flex; gap: 0.5rem; }
-    input { flex: 1; padding: 0.6rem; }
-    .results { padding-left: 1.5rem; }
-    article { border: 1px solid #ddd; border-radius: 0.4rem; padding: 1rem; margin: 0.8rem 0; }
-    header { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    article p { white-space: pre-wrap; }
-    small { color: #555; }
-    .error { color: #b00020; }
   `,
 })
 export class SearchComponent {

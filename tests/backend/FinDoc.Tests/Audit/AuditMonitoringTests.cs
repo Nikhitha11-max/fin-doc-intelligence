@@ -45,6 +45,7 @@ public class AuditMonitoringTests : IClassFixture<AuditMonitoringTests.Fixture>
                 host.UseSetting("Storage:RootPath", _storage);
                 host.UseSetting("Bootstrap:PlatformAdminEmail", PlatformEmail);
                 host.UseSetting("Bootstrap:PlatformAdminPassword", Password);
+                host.UseSetting("RateLimiting:LoginPermitsPerMinute", "100000");
                 host.UseSetting("Processing:WorkerEnabled", "false");
                 host.UseSetting("Embeddings:WorkerEnabled", "false");
                 host.UseSetting("History:WorkerEnabled", "false");

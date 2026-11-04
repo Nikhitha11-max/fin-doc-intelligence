@@ -1,23 +1,38 @@
 @if (auth.isLoggedIn() && access.me(); as me) {
-  <nav class="nav" aria-label="Main">
-    @if (me.hasAccess) {
-      <a routerLink="/documents">Documents</a>
-    }
-    @if (me.role === 'TenantAdmin' || me.role === 'DocumentManager' || me.role === 'Analyst') {
-      <a routerLink="/search">Search</a>
-      <a routerLink="/answers">Ask</a>
-      <a routerLink="/history">History</a>
-    }
-    @if (me.role === 'TenantAdmin' || me.role === 'Auditor') {
-      <a routerLink="/audit">Audit</a>
-    }
-    @if (me.role === 'TenantAdmin') {
-      <a routerLink="/team">Team</a>
-    }
-    @if (me.isPlatformAdmin) {
-      <a routerLink="/platform">Organizations</a>
-    }
-    <span class="who">{{ me.tenantName ?? (me.isPlatformAdmin ? 'Platform' : 'No organization access') }}{{ me.role ? ' · ' + me.role : '' }}</span>
-  </nav>
+  <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+      <a routerLink="/" class="flex items-center gap-2 !text-slate-900 hover:!text-slate-900">
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm">F</span>
+        <span class="text-base font-bold tracking-tight">FinDoc <span class="text-indigo-600">AI</span></span>
+      </a>
+
+      <nav class="flex flex-wrap items-center gap-1" aria-label="Main">
+        @if (me.hasAccess) {
+          <a routerLink="/documents" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">Documents</a>
+        }
+        @if (me.role === 'TenantAdmin' || me.role === 'DocumentManager' || me.role === 'Analyst') {
+          <a routerLink="/search" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">Search</a>
+          <a routerLink="/answers" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">Ask</a>
+          <a routerLink="/history" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">History</a>
+        }
+        @if (me.role === 'TenantAdmin' || me.role === 'Auditor') {
+          <a routerLink="/audit" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">Audit</a>
+        }
+        @if (me.role === 'TenantAdmin') {
+          <a routerLink="/team" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">Team</a>
+        }
+        @if (me.isPlatformAdmin) {
+          <a routerLink="/platform" routerLinkActive="!bg-indigo-50 !text-indigo-700" class="rounded-lg px-3 py-1.5 text-sm font-medium !text-slate-600 transition hover:bg-slate-100">Organizations</a>
+        }
+      </nav>
+
+      <div class="ml-auto flex items-center gap-3">
+        <span class="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:inline">{{ me.tenantName ?? (me.isPlatformAdmin ? 'Platform' : 'No organization access') }}{{ me.role ? ' · ' + me.role : '' }}</span>
+        <button type="button" class="btn-secondary btn-sm" (click)="logout()">Sign out</button>
+      </div>
+    </div>
+  </header>
 }
-<router-outlet />
+<div class="mx-auto max-w-6xl px-4 py-8">
+  <router-outlet />
+</div>

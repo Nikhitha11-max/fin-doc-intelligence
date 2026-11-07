@@ -1,12 +1,84 @@
+# FinDoc AI
+
+FinDoc AI is a multi-tenant financial document application for uploading, organizing,
+searching and asking questions about financial documents. Users can inspect the
+source passages behind an answer, while the API enforces tenant and role access.
+It is a development project, not a substitute for professional financial advice.
+
+## What is available
+
+- **Organizations and access:** platform administrators manage organizations;
+  tenant administrators manage their own team.
+- **Documents:** upload PDF, CSV and XLSX files, track processing and indexing,
+  download, rename, delete, retry processing and re-index.
+- **Search and answers:** retrieve passages from accessible documents, ask
+  questions and view source citations or an insufficient-evidence message.
+- **History and operations:** private conversation history, audit events,
+  health checks and platform diagnostics.
+
+**Current AI limitation:** only local, deterministic fake embedding and answer
+providers are implemented. Search uses token-based vectors, and answers quote
+matching text; this is not semantic search or a hosted generative model. External
+AI integration is a future decision, not an available configuration.
+
+## Technology stack
+
+| Area | Technology |
+|---|---|
+| Frontend | Angular 19, TypeScript, Tailwind CSS 4 |
+| Backend | ASP.NET Core / .NET 8, ASP.NET Core Identity |
+| Persistence | PostgreSQL, Entity Framework Core 8, pgvector |
+| Processing | In-process .NET background workers, PdfPig, Open XML SDK |
+| Tests | xUnit and ASP.NET Core integration tests; Jasmine and Karma |
+| File storage | Local private file storage for development |
+
+## Getting started
+
+Install .NET 8, a Node.js version compatible with Angular 19, and PostgreSQL
+with pgvector. Then follow the [local setup guide](docs/local-development.md)
+to create the database, configure a development password, and start both servers.
+The Angular application runs at <http://localhost:4200>; the API's HTTP launch
+profile runs at <http://localhost:5276>.
+
+## Documentation
+
+| Guide | What it covers |
+|---|---|
+| [Documentation index](docs/README.md) | Guides, task documents and specifications |
+| [Local development](docs/local-development.md) | Prerequisites, setup, credentials, tests and troubleshooting |
+| [Application workflows](docs/application-workflows.md) | Roles, document lifecycle, search, answers, history and audit |
+| [Architecture](docs/architecture.md) | Components, data flow, configuration and limitations |
+| [Product requirements](#product-and-system-requirements) | Original planning requirements and open decisions |
+| [Feature specifications](specs/) | Specifications, plans and tasks for each feature |
+
+## Repository layout
+
+```text
+src/backend/       API, application, domain and infrastructure projects
+src/frontend/      Angular application and frontend tests
+tests/backend/     Backend unit and integration tests
+docs/              Setup, architecture and feature guides
+specs/             Feature specifications, plans and tasks
+FinDoc.sln         .NET solution
+```
+
+## Product and system requirements
+
+The following sections preserve the original planning requirements. They describe
+goals and proposed behavior, not a guarantee that every feature is implemented.
+For current behavior, use the guides linked above and the source code.
+
+---
+
 # FinDoc AI — Project Requirements
 
 **Repository:** `fin-doc-intelligence`  
 **Product name:** FinDoc AI  
 **Document type:** Product and system requirements  
-**Status:** Initial planning draft  
+**Status:** Historical planning draft<br>
 **Audience:** Product owner, developer, GitHub Copilot, and Spec Kit
 
-> For the proposed repository layout, local setup, and task-by-task implementation guides, see the [documentation hub](docs/README.md). This file remains the product requirements reference.
+> For the current implementation and setup, see the [documentation hub](docs/README.md).
 
 ---
 
